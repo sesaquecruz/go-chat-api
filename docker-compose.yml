@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:15.3-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    container_name: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations:ro
+    command: [ "-path", "/migrations", "-database",  "postgres://postgres:postgres@postgres:5432/chat?sslmode=disable", "-verbose", "up" ]
+
+  chat:
+    profiles:
+      - app
+    container_name: chat
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build: .
+    environment:
+      - APP_DATABASE_HOST=postgres
+      - APP_DATABASE_PORT=5432
+      - APP_DATABASE_USER=postgres
+      - APP_DATABASE_PASSWORD=postgres
+      - APP_DATABASE_NAME=chat
+      - APP_API_PORT=8080
+      - APP_API_PATH=/api/v1
+      - APP_API_GIN_MODE=release
+      - APP_API_CORS_ORIGINS=*
+      - APP_API_JWT_ISSUER=https://dev-j6pmr0ckitt2062o.us.auth0.com/
+      - APP_API_JWT_AUDIENCE=https://dev-j6pmr0ckitt2062o.us.auth0.com/userinfo
+    ports:
+      - "8080:8080"

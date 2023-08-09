@@ -1,0 +1,20 @@
+[app.database]
+host = "localhost"
+port = "5432"
+user = "postgres"
+password = "postgres"
+name = "chat"
+
+[app.api]
+port = "8080"
+path = "/api/v1"
+
+[app.api.gin]
+mode = "release"
+
+[app.api.cors]
+origins = "*"
+
+[app.api.jwt]
+issuer = "https://dev-j6pmr0ckitt2062o.us.auth0.com/"
+audience = "https://dev-j6pmr0ckitt2062o.us.auth0.com/userinfo"
