@@ -5,35 +5,27 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
-
-	"github.com/sesaquecruz/go-chat-api/pkg"
 
 	"github.com/google/uuid"
 	"gopkg.in/go-jose/go-jose.v2"
 	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
-type IamServer struct {
-	webKey   jose.JSONWebKey
-	signer   jose.Signer
-	issuer   string
-	audience string
-	server   *http.Server
-	running  bool
-	logger   *pkg.Logger
+type Auth0Server struct {
+	signer jose.Signer
+	host   string
+	server *http.Server
 }
 
-func NewIamServer() *IamServer {
-	logger := pkg.NewLogger("IamServer")
-
+func NewAuth0Server() *Auth0Server {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		logger.Error(err)
+		log.Fatal(err)
 	}
 
 	algorithm := jose.RS256
@@ -52,21 +44,20 @@ func NewIamServer() *IamServer {
 
 	signer, err := jose.NewSigner(signKey, (&jose.SignerOptions{}).WithType("JWT"))
 	if err != nil {
-		logger.Error(err)
+		log.Fatal(err)
 	}
 
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		logger.Error(err)
+		log.Fatal(err)
 	}
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	if err := listener.Close(); err != nil {
-		logger.Error(err)
+		log.Fatal(err)
 	}
 
-	issuer := fmt.Sprintf("http://127.0.0.1:%d", port)
-
+	host := fmt.Sprintf("http://127.0.0.1:%d", port)
 	oidcUri := "/.well-known/openid-configuration"
 	jwksUri := "/.well-known/jwks.json"
 
@@ -76,7 +67,7 @@ func NewIamServer() *IamServer {
 			res := struct {
 				JwksUri string `json:"jwks_uri"`
 			}{
-				JwksUri: issuer + jwksUri,
+				JwksUri: host + jwksUri,
 			}
 			if err := json.NewEncoder(w).Encode(res); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,58 +89,39 @@ func NewIamServer() *IamServer {
 		Handler: handler,
 	}
 
-	return &IamServer{
-		webKey:   webKey,
-		signer:   signer,
-		issuer:   issuer,
-		audience: issuer + "/userinfo",
-		server:   &server,
-		logger:   logger,
+	return &Auth0Server{
+		signer: signer,
+		host:   host,
+		server: &server,
 	}
 }
 
-func (s *IamServer) GetIssuer() string {
-	return s.issuer
+func (s *Auth0Server) GetIssuer() string {
+	return s.host
 }
 
-func (s *IamServer) GetAudience() string {
-	return s.audience
+func (s *Auth0Server) GetAudience() string {
+	return s.host + "/userinfo"
 }
 
-func (s *IamServer) GenerateSub() string {
+func (s *Auth0Server) GenerateSub() string {
 	return fmt.Sprintf("auth0|%s", strings.ReplaceAll(uuid.NewString(), "-", "")[:24])
 }
 
-func (s *IamServer) GenerateJWT(subject string) (string, error) {
+func (s *Auth0Server) GenerateJWT(subject string) (string, error) {
 	claims := jwt.Claims{
-		Issuer:   s.issuer,
-		Audience: []string{s.audience},
+		Issuer:   s.GetIssuer(),
+		Audience: []string{s.GetAudience()},
 		Subject:  subject,
 	}
 
 	return jwt.Signed(s.signer).Claims(claims).CompactSerialize()
 }
 
-func (s *IamServer) IsRunning() bool {
-	return s.running
+func (s *Auth0Server) Run() error {
+	return s.server.ListenAndServe()
 }
 
-func (s *IamServer) Run() error {
-	if !s.running {
-		s.running = true
-		s.logger.Info("running iam server")
-		return s.server.ListenAndServe()
-	}
-
-	return errors.New("iam server already running")
-}
-
-func (s *IamServer) Stop(ctx context.Context) error {
-	if s.running {
-		s.running = false
-		s.logger.Info("stopping iam server")
-		return s.server.Shutdown(ctx)
-	}
-
-	return errors.New("aim server is not running")
+func (s *Auth0Server) Stop(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }

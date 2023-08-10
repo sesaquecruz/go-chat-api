@@ -17,7 +17,7 @@ type DatabaseConfig struct {
 type APIConfig struct {
 	Port         string
 	Path         string
-	GinMode      string
+	Mode         string
 	AllowOrigins string
 	JwtIssuer    string
 	JwtAudience  string
@@ -41,8 +41,8 @@ func init() {
 	env.SetDefault("APP_DATABASE_NAME", "")
 	env.SetDefault("APP_API_PORT", "")
 	env.SetDefault("APP_API_PATH", "")
-	env.SetDefault("APP_API_GIN_MODE", "")
-	env.SetDefault("APP_API_ALLOW_ORIGINS", "")
+	env.SetDefault("APP_API_MODE", "")
+	env.SetDefault("APP_API_CORS_ORIGINS", "")
 	env.SetDefault("APP_API_JWT_ISSUER", "")
 	env.SetDefault("APP_API_JWT_AUDIENCE", "")
 	env.AutomaticEnv()
@@ -77,7 +77,7 @@ func Load() {
 	cfg.API = APIConfig{
 		Port:         getString("APP_API_PORT"),
 		Path:         getString("APP_API_PATH"),
-		GinMode:      getString("APP_API_GIN_MODE"),
+		Mode:         getString("APP_API_MODE"),
 		AllowOrigins: getString("APP_API_CORS_ORIGINS"),
 		JwtIssuer:    getString("APP_API_JWT_ISSUER"),
 		JwtAudience:  getString("APP_API_JWT_AUDIENCE"),

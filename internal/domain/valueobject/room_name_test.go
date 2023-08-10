@@ -3,7 +3,7 @@ package valueobject
 import (
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ func TestShouldReturnARequiredRoomNameErrorWhenValueIsEmpty(t *testing.T) {
 	name, err := NewRoomNameWith(value)
 	assert.Nil(t, name)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomName)
 }
 
@@ -31,6 +31,6 @@ func TestShouldReturnAMaxSizeRoomNameErrorWhenValueHasMoreThan20Characters(t *te
 	name, err := NewRoomNameWith(value)
 	assert.Nil(t, name)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrMaxSizeRoomName)
 }

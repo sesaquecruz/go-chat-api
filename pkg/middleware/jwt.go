@@ -1,10 +1,12 @@
-package pkg
+package middleware
 
 import (
 	"errors"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/sesaquecruz/go-chat-api/pkg/log"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
@@ -13,7 +15,7 @@ import (
 )
 
 func JwtMiddleware(issuer string, audience []string) gin.HandlerFunc {
-	logger := NewLogger("JwtMiddleware")
+	logger := log.NewLogger("JwtMiddleware")
 
 	issuerURL, err := url.Parse(issuer)
 	if err != nil {

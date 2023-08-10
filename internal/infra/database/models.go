@@ -14,33 +14,33 @@ type RoomModel struct {
 	Updated_at string
 }
 
-func (rm *RoomModel) toEntity() (*entity.Room, error) {
-	id, err := valueobject.NewIDWith(rm.Id)
+func (r *RoomModel) ToEntity() (*entity.Room, error) {
+	id, err := valueobject.NewIDWith(r.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	adminId, err := valueobject.NewAuth0IDWith(rm.Admin_id)
+	adminId, err := valueobject.NewAuth0IDWith(r.Admin_id)
 	if err != nil {
 		return nil, err
 	}
 
-	name, err := valueobject.NewRoomNameWith(rm.Name)
+	name, err := valueobject.NewRoomNameWith(r.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	category, err := valueobject.NewRoomCategoryWith(rm.Category)
+	category, err := valueobject.NewRoomCategoryWith(r.Category)
 	if err != nil {
 		return nil, err
 	}
 
-	created_at, err := valueobject.NewDateTimeWith(rm.Created_at)
+	created_at, err := valueobject.NewDateTimeWith(r.Created_at)
 	if err != nil {
 		return nil, err
 	}
 
-	updated_at, err := valueobject.NewDateTimeWith(rm.Updated_at)
+	updated_at, err := valueobject.NewDateTimeWith(r.Updated_at)
 	if err != nil {
 		return nil, err
 	}

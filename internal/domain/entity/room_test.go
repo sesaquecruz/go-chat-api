@@ -3,7 +3,7 @@ package entity
 import (
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 
 	"github.com/stretchr/testify/assert"
@@ -53,7 +53,7 @@ func TestShouldReturnARequireIdErrorWhenIdIsNil(t *testing.T) {
 	room, err := NewRoomWith(nil, nil, nil, nil, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomId)
 }
 
@@ -63,13 +63,13 @@ func TestShouldReturnARequireAdminIdErrorWhenAdminIdIsNil(t *testing.T) {
 	room, err := NewRoom(nil, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomAdminId)
 
 	room, err = NewRoomWith(id, nil, nil, nil, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomAdminId)
 }
 
@@ -80,13 +80,13 @@ func TestShouldReturnARequireNameErrorWhenNameIsNil(t *testing.T) {
 	room, err := NewRoom(adminId, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomName)
 
 	room, err = NewRoomWith(id, adminId, nil, nil, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomName)
 }
 
@@ -98,13 +98,13 @@ func TestShouldReturnARequireCategoryErrorWhenCategoryIsNil(t *testing.T) {
 	room, err := NewRoom(adminId, name, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomCategory)
 
 	room, err = NewRoomWith(id, adminId, name, nil, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomCategory)
 }
 
@@ -117,7 +117,7 @@ func TestShouldReturnARequireCreatedAtErrorWhenCreatedAtIsNil(t *testing.T) {
 	room, err := NewRoomWith(id, adminId, name, category, nil, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomCreatedAt)
 }
 
@@ -131,7 +131,7 @@ func TestShouldReturnARequireUpdatedAtErrorWhenUpdatedAtIsNil(t *testing.T) {
 	room, err := NewRoomWith(id, adminId, name, category, createdAt, nil)
 	assert.Nil(t, room)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomUpdatedAt)
 }
 
@@ -167,7 +167,7 @@ func TestShouldReturnARequiredNameErrorWhenNewNameNil(t *testing.T) {
 
 	err = room.UpdateName(nil)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomName)
 	assert.Equal(t, oldName.Value(), room.Name().Value())
 	assert.True(t, room.updatedAt.TimeValue().Equal(*updatedAt.TimeValue()))
@@ -205,7 +205,7 @@ func TestShouldReturnARequiredCategoryErrorWhenNewCategoryNil(t *testing.T) {
 
 	err = room.UpdateCategory(nil)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomCategory)
 	assert.Equal(t, oldCategory.Value(), room.Category().Value())
 	assert.True(t, room.updatedAt.TimeValue().Equal(*updatedAt.TimeValue()))

@@ -8,8 +8,6 @@ name = "chat"
 [app.api]
 port = "8080"
 path = "/api/v1"
-
-[app.api.gin]
 mode = "release"
 
 [app.api.cors]

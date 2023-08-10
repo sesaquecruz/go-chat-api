@@ -4,37 +4,44 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
-	"github.com/sesaquecruz/go-chat-api/pkg"
+	"github.com/sesaquecruz/go-chat-api/pkg/log"
+	"github.com/sesaquecruz/go-chat-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 type RoomHandlerInterface interface {
 	CreateRoom(c *gin.Context)
+	FindRoom(c *gin.Context)
 }
 
 type RoomHandler struct {
 	createRoomUseCase usecase.CreateRoomUseCaseInterface
-	logger            *pkg.Logger
+	findRoomUseCase   usecase.FindRoomUseCaseInterface
+	logger            *log.Logger
 }
 
-func NewRoomHandler(createRoomUseCase usecase.CreateRoomUseCaseInterface) *RoomHandler {
+func NewRoomHandler(
+	createRoomUseCase usecase.CreateRoomUseCaseInterface,
+	findRoomUseCase usecase.FindRoomUseCaseInterface,
+) *RoomHandler {
 	return &RoomHandler{
 		createRoomUseCase: createRoomUseCase,
-		logger:            pkg.NewLogger("RoomHandler"),
+		findRoomUseCase:   findRoomUseCase,
+		logger:            log.NewLogger("RoomHandler"),
 	}
 }
 
-func (rh *RoomHandler) CreateRoom(c *gin.Context) {
-	jwtClaims, err := pkg.JwtClaims(c)
+func (h *RoomHandler) CreateRoom(c *gin.Context) {
+	jwtClaims, err := middleware.JwtClaims(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	var requestBody CreateRoomRequest
+	var requestBody RoomRequest
 	if err := c.BindJSON(&requestBody); err != nil {
 		return
 	}
@@ -45,18 +52,37 @@ func (rh *RoomHandler) CreateRoom(c *gin.Context) {
 		Category: requestBody.Category,
 	}
 
-	output, err := rh.createRoomUseCase.Execute(c.Request.Context(), &input)
+	output, err := h.createRoomUseCase.Execute(c.Request.Context(), &input)
 	if err != nil {
-		if _, ok := err.(*domain.ValidationError); ok {
+		if _, ok := err.(*errors.ValidationError); ok {
 			c.AbortWithStatusJSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 			return
 		}
 
-		rh.logger.Error(err)
+		h.logger.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	c.Header("Location", fmt.Sprintf("/rooms/%s", output.RoomId))
+	c.Header("Location", fmt.Sprintf("%s/%s", c.Request.URL, output.RoomId))
 	c.Status(http.StatusCreated)
+}
+
+func (h *RoomHandler) FindRoom(c *gin.Context) {
+	id := c.Param("id")
+
+	input := usecase.FindRoomUseCaseInput{RoomId: id}
+	output, err := h.findRoomUseCase.Execute(c.Request.Context(), &input)
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	res := RoomResponse{
+		Id:       output.Id,
+		Name:     output.Name,
+		Category: output.Category,
+	}
+
+	c.JSON(http.StatusOK, res)
 }

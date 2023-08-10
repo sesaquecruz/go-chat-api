@@ -3,7 +3,7 @@ package valueobject
 import (
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ func TestShouldReturnARequiredAuth0IDErrorWhenValueIsInvalid(t *testing.T) {
 	id, err := NewAuth0IDWith(value)
 	assert.Nil(t, id)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredId)
 }
 
@@ -30,6 +30,6 @@ func TestShouldReturnAnInvalidAuth0IDErrorWhenValueIsInvalid(t *testing.T) {
 	id, err := NewAuth0IDWith(value)
 	assert.Nil(t, id)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrInvalidId)
 }

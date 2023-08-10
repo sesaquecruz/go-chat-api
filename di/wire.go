@@ -4,15 +4,14 @@
 package di
 
 import (
-	"database/sql"
-
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
@@ -26,17 +25,24 @@ var setCreateRoomUseCaseInterface = wire.NewSet(
 	wire.Bind(new(usecase.CreateRoomUseCaseInterface), new(*usecase.CreateRoomUseCase)),
 )
 
+var setFindRoomUseCaseInterface = wire.NewSet(
+	usecase.NewFindRoomUseCase,
+	wire.Bind(new(usecase.FindRoomUseCaseInterface), new(*usecase.FindRoomUseCase)),
+)
+
 var setRoomHandlerInterface = wire.NewSet(
 	handler.NewRoomHandler,
 	wire.Bind(new(handler.RoomHandlerInterface), new(*handler.RoomHandler)),
 )
 
-func NewApiRouter(cfg *config.APIConfig, db *sql.DB) *web.ApiRouter {
+func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine {
 	wire.Build(
+		database.PostgresDb,
 		setRoomGatewayInterface,
 		setCreateRoomUseCaseInterface,
+		setFindRoomUseCaseInterface,
 		setRoomHandlerInterface,
-		web.NewApiRouter,
+		router.ApiRouter,
 	)
-	return &web.ApiRouter{}
+	return &gin.Engine{}
 }
