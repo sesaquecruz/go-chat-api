@@ -1,7 +1,7 @@
 package valueobject
 
 import (
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 
 	"github.com/google/uuid"
 )
@@ -19,12 +19,12 @@ func NewID() *ID {
 
 func NewIDWith(value string) (*ID, error) {
 	if value == "" {
-		return nil, domain.NewValidationError(ErrRequiredId)
+		return nil, errors.NewValidationError(ErrRequiredId)
 	}
 
 	id, err := uuid.Parse(value)
 	if id == uuid.Nil || err != nil {
-		return nil, domain.NewValidationError(ErrInvalidId)
+		return nil, errors.NewValidationError(ErrInvalidId)
 	}
 
 	return &ID{value: id.String()}, nil

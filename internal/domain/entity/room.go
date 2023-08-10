@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 )
 
@@ -69,22 +69,22 @@ func NewRoomWith(
 
 func (r *Room) Validate() error {
 	if r.id == nil {
-		return domain.NewValidationError(ErrRequiredRoomId)
+		return errors.NewValidationError(ErrRequiredRoomId)
 	}
 	if r.adminId == nil {
-		return domain.NewValidationError(ErrRequiredRoomAdminId)
+		return errors.NewValidationError(ErrRequiredRoomAdminId)
 	}
 	if r.name == nil {
-		return domain.NewValidationError(ErrRequiredRoomName)
+		return errors.NewValidationError(ErrRequiredRoomName)
 	}
 	if r.category == nil {
-		return domain.NewValidationError(ErrRequiredRoomCategory)
+		return errors.NewValidationError(ErrRequiredRoomCategory)
 	}
 	if r.createdAt == nil {
-		return domain.NewValidationError(ErrRequiredRoomCreatedAt)
+		return errors.NewValidationError(ErrRequiredRoomCreatedAt)
 	}
 	if r.updatedAt == nil {
-		return domain.NewValidationError(ErrRequiredRoomUpdatedAt)
+		return errors.NewValidationError(ErrRequiredRoomUpdatedAt)
 	}
 
 	return nil
@@ -116,7 +116,7 @@ func (r *Room) UpdatedAt() *valueobject.DateTime {
 
 func (r *Room) UpdateName(name *valueobject.RoomName) error {
 	if name == nil {
-		return domain.NewValidationError(ErrRequiredRoomName)
+		return errors.NewValidationError(ErrRequiredRoomName)
 	}
 
 	r.name = name
@@ -126,7 +126,7 @@ func (r *Room) UpdateName(name *valueobject.RoomName) error {
 
 func (r *Room) UpdateCategory(category *valueobject.RoomCategory) error {
 	if category == nil {
-		return domain.NewValidationError(ErrRequiredRoomCategory)
+		return errors.NewValidationError(ErrRequiredRoomCategory)
 	}
 
 	r.category = category

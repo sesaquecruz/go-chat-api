@@ -1,1 +1,1 @@
-## Chat Manager API
+## Web Chat API

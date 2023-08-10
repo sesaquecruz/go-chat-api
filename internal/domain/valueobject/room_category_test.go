@@ -3,7 +3,7 @@ package valueobject
 import (
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func TestShouldReturnARequireRoomCategoryErrorWhenValueIsEmpty(t *testing.T) {
 	category, err := NewRoomCategoryWith(value)
 	assert.Nil(t, category)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredRoomCategory)
 }
 
@@ -35,6 +35,6 @@ func TestShouldReturnAInvalidRoomCategoryErrorWhenValueIsInvalid(t *testing.T) {
 	category, err := NewRoomCategoryWith(value)
 	assert.Nil(t, category)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrInvalidRoomCategory)
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +48,7 @@ func TestShouldReturnARequiredDateTimeErrorWhenValueIsEmpty(t *testing.T) {
 	datetime, err := NewDateTimeWith(value)
 	assert.Nil(t, datetime)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrRequiredDateTime)
 }
 
@@ -57,6 +57,6 @@ func TestShouldReturnAInvalidDateTimeErrorWhenValueIsInvalid(t *testing.T) {
 	datetime, err := NewDateTimeWith(value)
 	assert.Nil(t, datetime)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, ErrInvalidDateTime)
 }

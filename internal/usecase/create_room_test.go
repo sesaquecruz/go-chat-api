@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
 
@@ -61,7 +61,7 @@ func TestShouldReturnAValidationErrorWhenAdminIdIsInvalid(t *testing.T) {
 	usecase := NewCreateRoomUseCase(mock.NewMockRoomGatewayInterface(ctrl))
 	output, err := usecase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, valueobject.ErrRequiredId)
 }
 
@@ -79,7 +79,7 @@ func TestShouldReturnAValidationErrorWhenNameIsInvalid(t *testing.T) {
 	usecase := NewCreateRoomUseCase(mock.NewMockRoomGatewayInterface(ctrl))
 	output, err := usecase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, valueobject.ErrRequiredRoomName)
 }
 
@@ -97,7 +97,7 @@ func TestShouldReturnAValidationErrorWhenCategoryIsInvalid(t *testing.T) {
 	usecase := NewCreateRoomUseCase(mock.NewMockRoomGatewayInterface(ctrl))
 	output, err := usecase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &domain.ValidationError{}, err)
+	assert.IsType(t, &errors.ValidationError{}, err)
 	assert.EqualError(t, err, valueobject.ErrRequiredRoomCategory)
 }
 
@@ -116,13 +116,13 @@ func TestShouldReturnAGatewayErrorWhenGatewayReturnAnError(t *testing.T) {
 	gateway.
 		EXPECT().
 		Save(gomock.Any(), gomock.Any()).
-		Return(domain.NewGatewayError("gateway error")).
+		Return(errors.NewGatewayError("gateway error")).
 		Times(1)
 
 	usecase := NewCreateRoomUseCase(gateway)
 	output, err := usecase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
-	assert.IsType(t, &domain.GatewayError{}, err)
+	assert.IsType(t, &errors.GatewayError{}, err)
 	assert.EqualError(t, err, "gateway error")
 }

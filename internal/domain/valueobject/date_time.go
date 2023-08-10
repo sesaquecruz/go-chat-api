@@ -3,7 +3,7 @@ package valueobject
 import (
 	"time"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 )
 
 const DateTimeLayout = "2006-01-02T15:04:05.999999Z"
@@ -28,12 +28,12 @@ func NewDateTime() *DateTime {
 
 func NewDateTimeWith(value string) (*DateTime, error) {
 	if value == "" {
-		return nil, domain.NewValidationError(ErrRequiredDateTime)
+		return nil, errors.NewValidationError(ErrRequiredDateTime)
 	}
 
 	t, err := time.Parse(DateTimeLayout, value)
 	if err != nil {
-		return nil, domain.NewValidationError(ErrInvalidDateTime)
+		return nil, errors.NewValidationError(ErrInvalidDateTime)
 	}
 
 	timeValue := t.UTC()

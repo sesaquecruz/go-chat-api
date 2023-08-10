@@ -25,10 +25,10 @@ services:
       - ./migrations:/migrations:ro
     command: [ "-path", "/migrations", "-database",  "postgres://postgres:postgres@postgres:5432/chat?sslmode=disable", "-verbose", "up" ]
 
-  chat:
+  app:
     profiles:
       - app
-    container_name: chat
+    container_name: app
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
       - APP_DATABASE_NAME=chat
       - APP_API_PORT=8080
       - APP_API_PATH=/api/v1
-      - APP_API_GIN_MODE=release
+      - APP_API_MODE=release
       - APP_API_CORS_ORIGINS=*
       - APP_API_JWT_ISSUER=https://dev-j6pmr0ckitt2062o.us.auth0.com/
       - APP_API_JWT_AUDIENCE=https://dev-j6pmr0ckitt2062o.us.auth0.com/userinfo
