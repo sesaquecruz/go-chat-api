@@ -12,6 +12,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/database/dbconn"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
@@ -20,7 +21,7 @@ import (
 // Injectors from wire.go:
 
 func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine {
-	sqlDB := database.PostgresDb(db)
+	sqlDB := dbconn.Postgres(db)
 	roomPostgresGateway := database.NewRoomPostgresGateway(sqlDB)
 	createRoomUseCase := usecase.NewCreateRoomUseCase(roomPostgresGateway)
 	findRoomUseCase := usecase.NewFindRoomUseCase(roomPostgresGateway)

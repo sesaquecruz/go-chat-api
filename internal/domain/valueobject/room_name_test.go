@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldCreateANewRoomNameWhenValueIsValid(t *testing.T) {
+func TestRoomName_ShouldCreateANewRoomNameWhenValueIsValid(t *testing.T) {
 	value := "A Room Name"
 	name, err := NewRoomNameWith(value)
 	assert.NotNil(t, name)
@@ -16,7 +16,7 @@ func TestShouldCreateANewRoomNameWhenValueIsValid(t *testing.T) {
 	assert.Equal(t, value, name.Value())
 }
 
-func TestShouldReturnARequiredRoomNameErrorWhenValueIsEmpty(t *testing.T) {
+func TestRoomName_ShouldReturnARequiredRoomNameErrorWhenValueIsEmpty(t *testing.T) {
 	value := ""
 	name, err := NewRoomNameWith(value)
 	assert.Nil(t, name)
@@ -25,7 +25,7 @@ func TestShouldReturnARequiredRoomNameErrorWhenValueIsEmpty(t *testing.T) {
 	assert.EqualError(t, err, ErrRequiredRoomName)
 }
 
-func TestShouldReturnAMaxSizeRoomNameErrorWhenValueHasMoreThan20Characters(t *testing.T) {
+func TestRoomName_ShouldReturnAMaxSizeRoomNameErrorWhenValueHasMoreThan20Characters(t *testing.T) {
 	value := "dfaiuerewnvdiuoriewruuiwqeuqwe89123jladjsdasadiou23"
 	assert.Equal(t, len(value), 51)
 	name, err := NewRoomNameWith(value)

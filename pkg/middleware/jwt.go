@@ -19,7 +19,7 @@ func JwtMiddleware(issuer string, audience []string) gin.HandlerFunc {
 
 	issuerURL, err := url.Parse(issuer)
 	if err != nil {
-		logger.Error(err)
+		logger.Fatal(err)
 	}
 
 	provider := jwks.NewCachingProvider(issuerURL, 10*time.Minute)
@@ -31,7 +31,7 @@ func JwtMiddleware(issuer string, audience []string) gin.HandlerFunc {
 		audience,
 	)
 	if err != nil {
-		logger.Error(err)
+		logger.Fatal(err)
 	}
 
 	jwtErrorHandler := func(w http.ResponseWriter, r *http.Request, err error) {

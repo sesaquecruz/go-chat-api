@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldCreateANewDateTime(t *testing.T) {
+func TestDateTime_ShouldCreateANewDateTime(t *testing.T) {
 	datetime := NewDateTime()
 	assert.NotNil(t, datetime)
 	timeValue := datetime.TimeValue()
@@ -20,7 +20,7 @@ func TestShouldCreateANewDateTime(t *testing.T) {
 	assert.True(t, timeValue.Equal(parsedValue))
 }
 
-func TestShouldCreateANewDateTimeWhenValueIsValid(t *testing.T) {
+func TestDateTime_ShouldCreateANewDateTimeWhenValueIsValid(t *testing.T) {
 	value := time.Now().UTC().Format(DateTimeLayout)
 	datetime, err := NewDateTimeWith(value)
 	assert.NotNil(t, datetime)
@@ -33,7 +33,7 @@ func TestShouldCreateANewDateTimeWhenValueIsValid(t *testing.T) {
 	assert.True(t, timeValue.Equal(parsedValue))
 }
 
-func TestShouldCreateEqualsDateTime(t *testing.T) {
+func TestDateTime_ShouldCreateEqualsDateTime(t *testing.T) {
 	datetime1 := NewDateTime()
 	assert.NotNil(t, datetime1)
 	datetime2, err := NewDateTimeWith(datetime1.StringValue())
@@ -43,7 +43,7 @@ func TestShouldCreateEqualsDateTime(t *testing.T) {
 	assert.True(t, datetime1.TimeValue().Equal(*datetime2.TimeValue()))
 }
 
-func TestShouldReturnARequiredDateTimeErrorWhenValueIsEmpty(t *testing.T) {
+func TestDateTime_ShouldReturnARequiredDateTimeErrorWhenValueIsEmpty(t *testing.T) {
 	value := ""
 	datetime, err := NewDateTimeWith(value)
 	assert.Nil(t, datetime)
@@ -52,7 +52,7 @@ func TestShouldReturnARequiredDateTimeErrorWhenValueIsEmpty(t *testing.T) {
 	assert.EqualError(t, err, ErrRequiredDateTime)
 }
 
-func TestShouldReturnAInvalidDateTimeErrorWhenValueIsInvalid(t *testing.T) {
+func TestDateTime_ShouldReturnAInvalidDateTimeErrorWhenValueIsInvalid(t *testing.T) {
 	value := "2006-01-02T15:04:00.999999"
 	datetime, err := NewDateTimeWith(value)
 	assert.Nil(t, datetime)

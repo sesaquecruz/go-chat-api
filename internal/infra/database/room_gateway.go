@@ -68,5 +68,15 @@ func (g *RoomPostgresGateway) FindById(ctx context.Context, id *valueobject.ID) 
 		return nil, err
 	}
 
-	return r.ToEntity()
+	room, err := r.ToEntity()
+	if err != nil {
+		g.logger.Error(err)
+		return nil, err
+	}
+
+	return room, nil
+}
+
+func (g *RoomPostgresGateway) Update(ctx context.Context, room *entity.Room) error {
+	return nil
 }

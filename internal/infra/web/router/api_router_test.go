@@ -16,6 +16,7 @@ import (
 )
 
 func (s *WebApiTestSuite) TestReturnAllowOrigins() {
+	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
 
@@ -29,7 +30,8 @@ func (s *WebApiTestSuite) TestReturnAllowOrigins() {
 	assert.Equal(t, "*", res.Header.Get("Access-Control-Allow-Origin"))
 }
 
-func (s *WebApiTestSuite) Test_CreateRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+func (s *WebApiTestSuite) TestCreateRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
 
@@ -42,7 +44,7 @@ func (s *WebApiTestSuite) Test_CreateRoom_ShouldReturnUnauthorizedWhenUnauthenti
 	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 }
 
-func (s *WebApiTestSuite) Test_CreateRoom_ShouldCreateANewRoom() {
+func (s *WebApiTestSuite) TestCreateRoom_ShouldCreateANewRoom() {
 	s.postgres.ClearDB()
 
 	t := s.T()
@@ -80,7 +82,8 @@ func (s *WebApiTestSuite) Test_CreateRoom_ShouldCreateANewRoom() {
 	assert.Equal(t, payload.Category, room.Category().Value())
 }
 
-func (s *WebApiTestSuite) Test_FindRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+func (s *WebApiTestSuite) TestFindRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
 	id := valueobject.NewID().Value()
@@ -94,7 +97,8 @@ func (s *WebApiTestSuite) Test_FindRoom_ShouldReturnUnauthorizedWhenUnauthentica
 	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 }
 
-func (s *WebApiTestSuite) Test_FindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
+func (s *WebApiTestSuite) TestFindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
+	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
 	jwt, _ := s.auth0.GenerateJWT(s.auth0.GenerateSub())
@@ -125,9 +129,8 @@ func (s *WebApiTestSuite) Test_FindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExi
 	}
 }
 
-func (s *WebApiTestSuite) Test_FindRoom_ShouldReturnARoomWhenIdExists() {
-	s.postgres.ClearDB()
-
+func (s *WebApiTestSuite) TestFindRoom_ShouldReturnARoomWhenIdExists() {
+	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
 	jwt, _ := s.auth0.GenerateJWT(s.auth0.GenerateSub())

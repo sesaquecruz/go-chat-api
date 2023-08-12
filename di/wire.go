@@ -7,6 +7,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/database/dbconn"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
@@ -37,7 +38,7 @@ var setRoomHandlerInterface = wire.NewSet(
 
 func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine {
 	wire.Build(
-		database.PostgresDb,
+		dbconn.Postgres,
 		setRoomGatewayInterface,
 		setCreateRoomUseCaseInterface,
 		setFindRoomUseCaseInterface,

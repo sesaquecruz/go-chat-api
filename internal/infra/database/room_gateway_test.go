@@ -79,7 +79,7 @@ func (s *RoomGatewayTestSuite) TestShouldSaveAndFindARoom() {
 	assert.Equal(t, room.UpdatedAt().StringValue(), result.CreatedAt().StringValue())
 }
 
-func (s *RoomGatewayTestSuite) TestShouldReturnAnErrorWhenFindANotSavedRoom() {
+func (s *RoomGatewayTestSuite) TestShouldReturnAnErrorWhenFindANonexistentRoom() {
 	defer s.container.ClearDB()
 	t := s.T()
 

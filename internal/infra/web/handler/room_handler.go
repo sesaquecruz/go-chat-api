@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 	"github.com/sesaquecruz/go-chat-api/pkg/middleware"
@@ -74,7 +75,17 @@ func (h *RoomHandler) FindRoom(c *gin.Context) {
 	input := usecase.FindRoomUseCaseInput{RoomId: id}
 	output, err := h.findRoomUseCase.Execute(c.Request.Context(), &input)
 	if err != nil {
-		c.AbortWithStatus(http.StatusNotFound)
+		if _, ok := err.(*errors.ValidationError); ok {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		if _, ok := err.(*errors.GatewayError); ok && err.Error() == gateway.ErrNotFoundRoom {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		h.logger.Error(err)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 

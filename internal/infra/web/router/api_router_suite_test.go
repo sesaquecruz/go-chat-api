@@ -45,6 +45,8 @@ func (s *WebApiTestSuite) SetupTest() {
 		log.Fatal(err)
 	}
 
+	postgres.ClearDB()
+
 	auth0 := test.NewAuth0Server()
 	go func() {
 		auth0.Run()

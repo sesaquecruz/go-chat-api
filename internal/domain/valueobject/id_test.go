@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldCreateANewID(t *testing.T) {
+func TestID_ShouldCreateANewID(t *testing.T) {
 	id := NewID()
 	assert.NotNil(t, id)
 	_, err := uuid.Parse(id.Value())
 	assert.Nil(t, err)
 }
 
-func TestShouldCreateANewIDWhenValueIsValid(t *testing.T) {
+func TestID_ShouldCreateANewIDWhenValueIsValid(t *testing.T) {
 	value := uuid.New().String()
 	id, err := NewIDWith(value)
 	assert.NotNil(t, id)
@@ -24,7 +24,7 @@ func TestShouldCreateANewIDWhenValueIsValid(t *testing.T) {
 	assert.Equal(t, value, id.Value())
 }
 
-func TestShouldReturnARequiredIDErrorWhenValueIsInvalid(t *testing.T) {
+func TestID_ShouldReturnARequiredIDErrorWhenValueIsInvalid(t *testing.T) {
 	value := ""
 	id, err := NewIDWith(value)
 	assert.Nil(t, id)
@@ -33,7 +33,7 @@ func TestShouldReturnARequiredIDErrorWhenValueIsInvalid(t *testing.T) {
 	assert.EqualError(t, err, ErrRequiredId)
 }
 
-func TestShouldReturnAnInvalidIDErrorWhenValueIsInvalid(t *testing.T) {
+func TestID_ShouldReturnAnInvalidIDErrorWhenValueIsInvalid(t *testing.T) {
 	value := "kj12389013kjfdsf9819023jkhfjds"
 	id, err := NewIDWith(value)
 	assert.Nil(t, id)

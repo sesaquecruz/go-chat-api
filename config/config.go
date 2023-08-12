@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 
+	"github.com/sesaquecruz/go-chat-api/pkg/log"
 	"github.com/spf13/viper"
 )
 
@@ -33,6 +34,8 @@ var file *viper.Viper
 var cfg *Config
 
 func init() {
+	logger := log.NewLogger("config")
+
 	env = viper.New()
 	env.SetDefault("APP_DATABASE_HOST", "")
 	env.SetDefault("APP_DATABASE_PORT", "")
@@ -51,7 +54,11 @@ func init() {
 	file.SetConfigName("config")
 	file.SetConfigType("toml")
 	file.AddConfigPath(".")
-	file.ReadInConfig()
+
+	err := file.ReadInConfig()
+	if err != nil {
+		logger.Info(err)
+	}
 }
 
 func getString(key string) string {
