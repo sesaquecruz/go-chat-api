@@ -9,19 +9,19 @@ import (
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 )
 
-type RoomPostgresGateway struct {
+type RoomGateway struct {
 	db     *sql.DB
 	logger *log.Logger
 }
 
-func NewRoomPostgresGateway(db *sql.DB) *RoomPostgresGateway {
-	return &RoomPostgresGateway{
+func NewRoomGateway(db *sql.DB) *RoomGateway {
+	return &RoomGateway{
 		db:     db,
-		logger: log.NewLogger("RoomPostgresGateway"),
+		logger: log.NewLogger("RoomGateway"),
 	}
 }
 
-func (g *RoomPostgresGateway) Save(ctx context.Context, room *entity.Room) error {
+func (g *RoomGateway) Save(ctx context.Context, room *entity.Room) error {
 	stmt, err := g.db.PrepareContext(ctx, "INSERT INTO rooms (id, admin_id, name, category, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		g.logger.Error(err)
@@ -46,7 +46,7 @@ func (g *RoomPostgresGateway) Save(ctx context.Context, room *entity.Room) error
 	return nil
 }
 
-func (g *RoomPostgresGateway) FindById(ctx context.Context, id *valueobject.ID) (*entity.Room, error) {
+func (g *RoomGateway) FindById(ctx context.Context, id *valueobject.ID) (*entity.Room, error) {
 	stmt, err := g.db.PrepareContext(ctx, "SELECT id, admin_id, name, category, created_at, updated_at FROM rooms WHERE id = $1")
 	if err != nil {
 		g.logger.Error(err)
@@ -68,5 +68,36 @@ func (g *RoomPostgresGateway) FindById(ctx context.Context, id *valueobject.ID) 
 		return nil, err
 	}
 
-	return r.ToEntity()
+	room, err := r.ToEntity()
+	if err != nil {
+		g.logger.Error(err)
+		return nil, err
+	}
+
+	return room, nil
+}
+
+func (g *RoomGateway) Update(ctx context.Context, room *entity.Room) error {
+	stmt, err := g.db.PrepareContext(ctx, "UPDATE rooms SET id = $1, admin_id = $2, name = $3, category = $4, created_at = $5, updated_at = $6")
+	if err != nil {
+		g.logger.Error(err)
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(
+		ctx,
+		room.Id().Value(),
+		room.AdminId().Value(),
+		room.Name().Value(),
+		room.Category().Value(),
+		room.CreatedAt().StringValue(),
+		room.UpdatedAt().StringValue(),
+	)
+	if err != nil {
+		g.logger.Error(err)
+		return err
+	}
+
+	return nil
 }

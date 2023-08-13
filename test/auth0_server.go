@@ -6,12 +6,12 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/sesaquecruz/go-chat-api/pkg/log"
 	"gopkg.in/go-jose/go-jose.v2"
 	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
@@ -20,12 +20,15 @@ type Auth0Server struct {
 	signer jose.Signer
 	host   string
 	server *http.Server
+	logger *log.Logger
 }
 
 func NewAuth0Server() *Auth0Server {
+	logger := log.NewLogger("Auth0Server")
+
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	algorithm := jose.RS256
@@ -44,17 +47,17 @@ func NewAuth0Server() *Auth0Server {
 
 	signer, err := jose.NewSigner(signKey, (&jose.SignerOptions{}).WithType("JWT"))
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	if err := listener.Close(); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	host := fmt.Sprintf("http://127.0.0.1:%d", port)
@@ -93,6 +96,7 @@ func NewAuth0Server() *Auth0Server {
 		signer: signer,
 		host:   host,
 		server: &server,
+		logger: logger,
 	}
 }
 
@@ -115,13 +119,28 @@ func (s *Auth0Server) GenerateJWT(subject string) (string, error) {
 		Subject:  subject,
 	}
 
-	return jwt.Signed(s.signer).Claims(claims).CompactSerialize()
+	token, err := jwt.Signed(s.signer).Claims(claims).CompactSerialize()
+	if err != nil {
+		s.logger.Error(err)
+	}
+
+	return token, err
 }
 
 func (s *Auth0Server) Run() error {
-	return s.server.ListenAndServe()
+	err := s.server.ListenAndServe()
+	if err != nil {
+		s.logger.Error(err)
+	}
+
+	return err
 }
 
 func (s *Auth0Server) Stop(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
+	err := s.server.Shutdown(ctx)
+	if err != nil {
+		s.logger.Error(err)
+	}
+
+	return err
 }

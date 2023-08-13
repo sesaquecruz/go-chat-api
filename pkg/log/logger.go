@@ -43,6 +43,11 @@ func (l *Logger) Error(v ...any) {
 	l.err.Println(v...)
 }
 
+func (l *Logger) Fatal(v ...any) {
+	l.err.Println(v...)
+	os.Exit(1)
+}
+
 func (l *Logger) Debugf(format string, v ...any) {
 	l.debug.Printf(format, v...)
 }
@@ -57,4 +62,9 @@ func (l *Logger) Warningf(format string, v ...any) {
 
 func (l *Logger) Errorf(format string, v ...any) {
 	l.err.Printf(format, v...)
+}
+
+func (l *Logger) Fatalf(format string, v ...any) {
+	l.err.Printf(format, v...)
+	os.Exit(1)
 }

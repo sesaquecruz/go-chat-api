@@ -1,11 +1,11 @@
-package handler
+package web
 
-type RoomRequest struct {
+type RoomRequestDto struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
 }
 
-type RoomResponse struct {
+type RoomResponseDto struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
 	Category string `json:"category"`

@@ -64,3 +64,17 @@ func (mr *MockRoomGatewayInterfaceMockRecorder) Save(ctx, room interface{}) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRoomGatewayInterface)(nil).Save), ctx, room)
 }
+
+// Update mocks base method.
+func (m *MockRoomGatewayInterface) Update(ctx context.Context, room *entity.Room) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, room)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockRoomGatewayInterfaceMockRecorder) Update(ctx, room interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockRoomGatewayInterface)(nil).Update), ctx, room)
+}

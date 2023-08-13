@@ -2,7 +2,10 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
+	domain_errors "github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -45,7 +48,12 @@ func (u *FindRoomUseCase) Execute(ctx context.Context, input *FindRoomUseCaseInp
 
 	room, err := u.roomGateway.FindById(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain_errors.NewGatewayError(gateway.ErrNotFoundRoom)
+		}
+
+		u.logger.Error(err)
+		return nil, domain_errors.NewGatewayError(err.Error())
 	}
 
 	return &FindRoomUseCaseOutput{

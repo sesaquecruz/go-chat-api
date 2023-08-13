@@ -7,6 +7,7 @@ import (
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
+	gateway_pkg "github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
 	"github.com/stretchr/testify/assert"
@@ -14,14 +15,14 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestShouldReturnARoomWhenRoomIdExists(t *testing.T) {
+func TestFindRoomUseCase_ShouldReturnARoomWhenRoomIdExists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	room, _ := entity.NewRoom(adminId, name, category)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	ctx := context.Background()
 	input := FindRoomUseCaseInput{RoomId: room.Id().Value()}
@@ -49,11 +50,11 @@ func TestShouldReturnARoomWhenRoomIdExists(t *testing.T) {
 	assert.Equal(t, room.UpdatedAt().StringValue(), output.UpdatedAt)
 }
 
-func TestShouldReturnAnErrorWhenRoomIdDoesNotExist(t *testing.T) {
-	id := valueobject.NewID().Value()
-
+func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	id := valueobject.NewID().Value()
 
 	ctx := context.Background()
 	input := FindRoomUseCaseInput{RoomId: id}
@@ -73,23 +74,19 @@ func TestShouldReturnAnErrorWhenRoomIdDoesNotExist(t *testing.T) {
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, sql.ErrNoRows)
+	assert.EqualError(t, err, gateway_pkg.ErrNotFoundRoom)
 }
 
-func TestShouldReturnAnErrorWhenRoomIdIsInvalid(t *testing.T) {
-	id := "fdaiuo13j23ufoesfsfd"
-
+func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	id := "fdaiuo13j23ufoesfsfd"
 
 	ctx := context.Background()
 	input := FindRoomUseCaseInput{RoomId: id}
 
 	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
-		EXPECT().
-		FindById(gomock.Any(), gomock.Any()).
-		Times(0)
 
 	useCase := NewFindRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)

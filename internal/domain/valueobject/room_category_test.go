@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldCreateANewCategoryWhenValueIsValid(t *testing.T) {
+func TestRoomCategory_ShouldCreateANewCategoryWhenValueIsValid(t *testing.T) {
 	categories := []string{
 		"General", "Tech", "Game", "Book", "Movie", "Music", "Language", "Science",
 	}
@@ -21,7 +21,7 @@ func TestShouldCreateANewCategoryWhenValueIsValid(t *testing.T) {
 	}
 }
 
-func TestShouldReturnARequireRoomCategoryErrorWhenValueIsEmpty(t *testing.T) {
+func TestRoomCategory_ShouldReturnARequireRoomCategoryErrorWhenValueIsEmpty(t *testing.T) {
 	value := ""
 	category, err := NewRoomCategoryWith(value)
 	assert.Nil(t, category)
@@ -30,7 +30,7 @@ func TestShouldReturnARequireRoomCategoryErrorWhenValueIsEmpty(t *testing.T) {
 	assert.EqualError(t, err, ErrRequiredRoomCategory)
 }
 
-func TestShouldReturnAInvalidRoomCategoryErrorWhenValueIsInvalid(t *testing.T) {
+func TestRoomCategory_ShouldReturnAInvalidRoomCategoryErrorWhenValueIsInvalid(t *testing.T) {
 	value := "Other"
 	category, err := NewRoomCategoryWith(value)
 	assert.Nil(t, category)
