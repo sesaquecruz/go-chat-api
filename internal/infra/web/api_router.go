@@ -1,14 +1,16 @@
-package router
+package web
 
 import (
 	"github.com/sesaquecruz/go-chat-api/config"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
 	"github.com/sesaquecruz/go-chat-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func ApiRouter(cfg *config.APIConfig, roomHandler handler.RoomHandlerInterface) *gin.Engine {
+func ApiRouter(
+	cfg *config.APIConfig,
+	roomHandler RoomHandlerInterface,
+) *gin.Engine {
 	gin.SetMode(cfg.Mode)
 
 	r := gin.New()
@@ -20,6 +22,7 @@ func ApiRouter(cfg *config.APIConfig, roomHandler handler.RoomHandlerInterface) 
 
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms/:id", roomHandler.FindRoom)
+	api.PUT("/rooms/:id", roomHandler.UpdateRoom)
 
 	return r
 }

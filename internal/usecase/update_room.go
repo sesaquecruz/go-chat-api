@@ -66,7 +66,7 @@ func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *UpdateRoomUseCas
 	}
 
 	if adminId.Value() != room.AdminId().Value() {
-		return domain_errors.NewValidationError(valueobject.ErrInvalidId)
+		return domain_errors.NewAuthorizationError("invalid room admin")
 	}
 
 	if err := room.UpdateName(name); err != nil {

@@ -99,7 +99,7 @@ func TestUpdateRoomUseCase_ShouldReturnAGatewayErrorWhenRoomIdDoesNotExist(t *te
 	assert.EqualError(t, err, gateway_pkg.ErrNotFoundRoom)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenAdminIdIsNotRoomAdmin(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnAnAuthorizationErrorWhenAdminIdIsNotRoomAdmin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -141,8 +141,8 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenAdminIdIsNotRoomAdmin
 	useCase := NewUpdateRoomUseCase(gateway)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, valueobject.ErrInvalidId)
+	assert.IsType(t, &errors.AuthorizationError{}, err)
+	assert.EqualError(t, err, "invalid room admin")
 }
 
 func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *testing.T) {

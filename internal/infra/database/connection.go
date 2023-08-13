@@ -1,4 +1,4 @@
-package dbconn
+package database
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func Postgres(cfg *config.DatabaseConfig) *sql.DB {
+func DbConnection(cfg *config.DatabaseConfig) *sql.DB {
 	logger := log.NewLogger("PostgresDb")
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",

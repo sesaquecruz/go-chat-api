@@ -12,30 +12,31 @@ import (
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/database/dbconn"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 )
 
 // Injectors from wire.go:
 
 func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine {
-	sqlDB := dbconn.Postgres(db)
-	roomPostgresGateway := database.NewRoomPostgresGateway(sqlDB)
-	createRoomUseCase := usecase.NewCreateRoomUseCase(roomPostgresGateway)
-	findRoomUseCase := usecase.NewFindRoomUseCase(roomPostgresGateway)
-	roomHandler := handler.NewRoomHandler(createRoomUseCase, findRoomUseCase)
-	engine := router.ApiRouter(api, roomHandler)
+	sqlDB := database.DbConnection(db)
+	roomGateway := database.NewRoomGateway(sqlDB)
+	createRoomUseCase := usecase.NewCreateRoomUseCase(roomGateway)
+	findRoomUseCase := usecase.NewFindRoomUseCase(roomGateway)
+	updateRoomUseCase := usecase.NewUpdateRoomUseCase(roomGateway)
+	roomHandler := web.NewRoomHandler(createRoomUseCase, findRoomUseCase, updateRoomUseCase)
+	engine := web.ApiRouter(api, roomHandler)
 	return engine
 }
 
 // wire.go:
 
-var setRoomGatewayInterface = wire.NewSet(database.NewRoomPostgresGateway, wire.Bind(new(gateway.RoomGatewayInterface), new(*database.RoomPostgresGateway)))
+var setRoomGatewayInterface = wire.NewSet(database.NewRoomGateway, wire.Bind(new(gateway.RoomGatewayInterface), new(*database.RoomGateway)))
 
 var setCreateRoomUseCaseInterface = wire.NewSet(usecase.NewCreateRoomUseCase, wire.Bind(new(usecase.CreateRoomUseCaseInterface), new(*usecase.CreateRoomUseCase)))
 
 var setFindRoomUseCaseInterface = wire.NewSet(usecase.NewFindRoomUseCase, wire.Bind(new(usecase.FindRoomUseCaseInterface), new(*usecase.FindRoomUseCase)))
 
-var setRoomHandlerInterface = wire.NewSet(handler.NewRoomHandler, wire.Bind(new(handler.RoomHandlerInterface), new(*handler.RoomHandler)))
+var setUpdateRoomUseCaseInterface = wire.NewSet(usecase.NewUpdateRoomUseCase, wire.Bind(new(usecase.UpdateRoomUseCaseInterface), new(*usecase.UpdateRoomUseCase)))
+
+var setRoomHandlerInterface = wire.NewSet(web.NewRoomHandler, wire.Bind(new(web.RoomHandlerInterface), new(*web.RoomHandler)))

@@ -20,7 +20,7 @@ type RoomGatewayTestSuite struct {
 	suite.Suite
 	ctx       context.Context
 	container *test.PostgresContainer
-	gateway   *RoomPostgresGateway
+	gateway   *RoomGateway
 }
 
 func (s *RoomGatewayTestSuite) SetupSuite() {
@@ -44,7 +44,7 @@ func (s *RoomGatewayTestSuite) SetupSuite() {
 
 	s.ctx = ctx
 	s.container = container
-	s.gateway = NewRoomPostgresGateway(db)
+	s.gateway = NewRoomGateway(db)
 }
 
 func (s *RoomGatewayTestSuite) TearDownSuite() {
