@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
-	domain_errors "github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 )
@@ -49,11 +49,11 @@ func (u *FindRoomUseCase) Execute(ctx context.Context, input *FindRoomUseCaseInp
 	room, err := u.roomGateway.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domain_errors.NewGatewayError(gateway.ErrNotFoundRoom)
+			return nil, validation.ErrNotFoundRoom
 		}
 
 		u.logger.Error(err)
-		return nil, domain_errors.NewGatewayError(err.Error())
+		return nil, validation.NewInternalError(err)
 	}
 
 	return &FindRoomUseCaseOutput{
@@ -61,7 +61,7 @@ func (u *FindRoomUseCase) Execute(ctx context.Context, input *FindRoomUseCaseInp
 		AdminId:   room.AdminId().Value(),
 		Name:      room.Name().Value(),
 		Category:  room.Category().Value(),
-		CreatedAt: room.CreatedAt().StringValue(),
-		UpdatedAt: room.UpdatedAt().StringValue(),
+		CreatedAt: room.CreatedAt().Value(),
+		UpdatedAt: room.UpdatedAt().Value(),
 	}, nil
 }

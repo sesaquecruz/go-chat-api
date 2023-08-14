@@ -34,6 +34,11 @@ var setUpdateRoomUseCaseInterface = wire.NewSet(
 	wire.Bind(new(usecase.UpdateRoomUseCaseInterface), new(*usecase.UpdateRoomUseCase)),
 )
 
+var setDeleteRoomUseCaseInterface = wire.NewSet(
+	usecase.NewDeleteRoomUseCase,
+	wire.Bind(new(usecase.DeleteRoomUseCaseInterface), new(*usecase.DeleteRoomUseCase)),
+)
+
 var setRoomHandlerInterface = wire.NewSet(
 	web.NewRoomHandler,
 	wire.Bind(new(web.RoomHandlerInterface), new(*web.RoomHandler)),
@@ -46,6 +51,7 @@ func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine 
 		setCreateRoomUseCaseInterface,
 		setFindRoomUseCaseInterface,
 		setUpdateRoomUseCaseInterface,
+		setDeleteRoomUseCaseInterface,
 		setRoomHandlerInterface,
 		web.ApiRouter,
 	)

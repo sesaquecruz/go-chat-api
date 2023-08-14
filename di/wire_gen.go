@@ -24,7 +24,8 @@ func NewApiRouter(db *config.DatabaseConfig, api *config.APIConfig) *gin.Engine 
 	createRoomUseCase := usecase.NewCreateRoomUseCase(roomGateway)
 	findRoomUseCase := usecase.NewFindRoomUseCase(roomGateway)
 	updateRoomUseCase := usecase.NewUpdateRoomUseCase(roomGateway)
-	roomHandler := web.NewRoomHandler(createRoomUseCase, findRoomUseCase, updateRoomUseCase)
+	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomGateway)
+	roomHandler := web.NewRoomHandler(createRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase)
 	engine := web.ApiRouter(api, roomHandler)
 	return engine
 }
@@ -38,5 +39,7 @@ var setCreateRoomUseCaseInterface = wire.NewSet(usecase.NewCreateRoomUseCase, wi
 var setFindRoomUseCaseInterface = wire.NewSet(usecase.NewFindRoomUseCase, wire.Bind(new(usecase.FindRoomUseCaseInterface), new(*usecase.FindRoomUseCase)))
 
 var setUpdateRoomUseCaseInterface = wire.NewSet(usecase.NewUpdateRoomUseCase, wire.Bind(new(usecase.UpdateRoomUseCaseInterface), new(*usecase.UpdateRoomUseCase)))
+
+var setDeleteRoomUseCaseInterface = wire.NewSet(usecase.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCaseInterface), new(*usecase.DeleteRoomUseCase)))
 
 var setRoomHandlerInterface = wire.NewSet(web.NewRoomHandler, wire.Bind(new(web.RoomHandlerInterface), new(*web.RoomHandler)))

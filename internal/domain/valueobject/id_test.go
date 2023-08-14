@@ -3,7 +3,7 @@ package valueobject
 import (
 	"testing"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -29,8 +29,7 @@ func TestID_ShouldReturnARequiredIDErrorWhenValueIsInvalid(t *testing.T) {
 	id, err := NewIDWith(value)
 	assert.Nil(t, id)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, ErrRequiredId)
+	assert.ErrorIs(t, err, validation.ErrRequiredId)
 }
 
 func TestID_ShouldReturnAnInvalidIDErrorWhenValueIsInvalid(t *testing.T) {
@@ -38,6 +37,5 @@ func TestID_ShouldReturnAnInvalidIDErrorWhenValueIsInvalid(t *testing.T) {
 	id, err := NewIDWith(value)
 	assert.Nil(t, id)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, ErrInvalidId)
+	assert.ErrorIs(t, err, validation.ErrInvalidId)
 }

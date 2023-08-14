@@ -1,24 +1,17 @@
 package entity
 
 import (
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 )
-
-const ErrRequiredRoomId = "room id is required"
-const ErrRequiredRoomAdminId = "room admin id is required"
-const ErrRequiredRoomName = "room name is required"
-const ErrRequiredRoomCategory = "room category is required"
-const ErrRequiredRoomCreatedAt = "room created at is required"
-const ErrRequiredRoomUpdatedAt = "room updated at is required"
 
 type Room struct {
 	id        *valueobject.ID
 	adminId   *valueobject.Auth0ID
 	name      *valueobject.RoomName
 	category  *valueobject.RoomCategory
-	createdAt *valueobject.DateTime
-	updatedAt *valueobject.DateTime
+	createdAt *valueobject.Timestamp
+	updatedAt *valueobject.Timestamp
 }
 
 func NewRoom(
@@ -26,7 +19,7 @@ func NewRoom(
 	name *valueobject.RoomName,
 	category *valueobject.RoomCategory,
 ) (*Room, error) {
-	now := valueobject.NewDateTime()
+	now := valueobject.NewTimestamp()
 	room := &Room{
 		id:        valueobject.NewID(),
 		adminId:   adminId,
@@ -48,8 +41,8 @@ func NewRoomWith(
 	adminId *valueobject.Auth0ID,
 	name *valueobject.RoomName,
 	category *valueobject.RoomCategory,
-	createdAt *valueobject.DateTime,
-	updatedAt *valueobject.DateTime,
+	createdAt *valueobject.Timestamp,
+	updatedAt *valueobject.Timestamp,
 ) (*Room, error) {
 	room := &Room{
 		id:        id,
@@ -69,22 +62,22 @@ func NewRoomWith(
 
 func (r *Room) Validate() error {
 	if r.id == nil {
-		return errors.NewValidationError(ErrRequiredRoomId)
+		return validation.ErrRequiredRoomId
 	}
 	if r.adminId == nil {
-		return errors.NewValidationError(ErrRequiredRoomAdminId)
+		return validation.ErrRequiredRoomAdminId
 	}
 	if r.name == nil {
-		return errors.NewValidationError(ErrRequiredRoomName)
+		return validation.ErrRequiredRoomName
 	}
 	if r.category == nil {
-		return errors.NewValidationError(ErrRequiredRoomCategory)
+		return validation.ErrRequiredRoomCategory
 	}
 	if r.createdAt == nil {
-		return errors.NewValidationError(ErrRequiredRoomCreatedAt)
+		return validation.ErrRequiredRoomCreatedAt
 	}
 	if r.updatedAt == nil {
-		return errors.NewValidationError(ErrRequiredRoomUpdatedAt)
+		return validation.ErrRequiredRoomUpdatedAt
 	}
 
 	return nil
@@ -106,30 +99,30 @@ func (r *Room) Category() *valueobject.RoomCategory {
 	return r.category
 }
 
-func (r *Room) CreatedAt() *valueobject.DateTime {
+func (r *Room) CreatedAt() *valueobject.Timestamp {
 	return r.createdAt
 }
 
-func (r *Room) UpdatedAt() *valueobject.DateTime {
+func (r *Room) UpdatedAt() *valueobject.Timestamp {
 	return r.updatedAt
 }
 
 func (r *Room) UpdateName(name *valueobject.RoomName) error {
 	if name == nil {
-		return errors.NewValidationError(ErrRequiredRoomName)
+		return validation.ErrRequiredRoomName
 	}
 
 	r.name = name
-	r.updatedAt = valueobject.NewDateTime()
+	r.updatedAt = valueobject.NewTimestamp()
 	return nil
 }
 
 func (r *Room) UpdateCategory(category *valueobject.RoomCategory) error {
 	if category == nil {
-		return errors.NewValidationError(ErrRequiredRoomCategory)
+		return validation.ErrRequiredRoomCategory
 	}
 
 	r.category = category
-	r.updatedAt = valueobject.NewDateTime()
+	r.updatedAt = valueobject.NewTimestamp()
 	return nil
 }

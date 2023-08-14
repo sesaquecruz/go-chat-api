@@ -35,8 +35,8 @@ func (g *RoomGateway) Save(ctx context.Context, room *entity.Room) error {
 		room.AdminId().Value(),
 		room.Name().Value(),
 		room.Category().Value(),
-		room.CreatedAt().StringValue(),
-		room.UpdatedAt().StringValue(),
+		room.CreatedAt().Value(),
+		room.UpdatedAt().Value(),
 	)
 	if err != nil {
 		g.logger.Error(err)
@@ -91,9 +91,26 @@ func (g *RoomGateway) Update(ctx context.Context, room *entity.Room) error {
 		room.AdminId().Value(),
 		room.Name().Value(),
 		room.Category().Value(),
-		room.CreatedAt().StringValue(),
-		room.UpdatedAt().StringValue(),
+		room.CreatedAt().Value(),
+		room.UpdatedAt().Value(),
 	)
+	if err != nil {
+		g.logger.Error(err)
+		return err
+	}
+
+	return nil
+}
+
+func (g *RoomGateway) Delete(ctx context.Context, id *valueobject.ID) error {
+	stmt, err := g.db.PrepareContext(ctx, "DELETE FROM rooms WHERE id = $1")
+	if err != nil {
+		g.logger.Error(err)
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, id.Value())
 	if err != nil {
 		g.logger.Error(err)
 		return err

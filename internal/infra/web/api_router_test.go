@@ -72,10 +72,12 @@ func (s *ApiRouterTestSuite) SetupTest() {
 	createRoomUseCase := usecase.NewCreateRoomUseCase(roomGateway)
 	findRoomUseCase := usecase.NewFindRoomUseCase(roomGateway)
 	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomGateway)
+	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomGateway)
 	roomHandler := NewRoomHandler(
 		createRoomUseCase,
 		findRoomUseCase,
 		updateRoomUsecase,
+		deleteRoomUseCase,
 	)
 
 	apiRouter := ApiRouter(&cfg, roomHandler)
@@ -173,6 +175,7 @@ func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnUnauthorizedWhenUnauthenti
 	defer s.postgres.ClearDB()
 	t := s.T()
 	r := s.router
+
 	id := valueobject.NewID().Value()
 
 	w := httptest.NewRecorder()
@@ -255,8 +258,10 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnUnauthorizedWhenUnauthen
 	t := s.T()
 	r := s.router
 
+	id := valueobject.NewID().Value()
+
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPut, "/api/v1/rooms", nil)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/rooms/"+id, nil)
 
 	r.ServeHTTP(w, req)
 	res := w.Result()
@@ -326,12 +331,13 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnForbiddenWhenAdminIdIsIn
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
 	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	assert.NotNil(t, savedRoom)
 	assert.Nil(t, err)
 	assert.Equal(t, room.AdminId().Value(), savedRoom.AdminId().Value())
 	assert.Equal(t, room.Name().Value(), savedRoom.Name().Value())
 	assert.Equal(t, room.Category().Value(), savedRoom.Category().Value())
-	assert.True(t, room.CreatedAt().TimeValue().Equal(*savedRoom.CreatedAt().TimeValue()))
-	assert.True(t, room.UpdatedAt().TimeValue().Equal(*savedRoom.UpdatedAt().TimeValue()))
+	assert.True(t, room.CreatedAt().Time().Equal(savedRoom.CreatedAt().Time()))
+	assert.True(t, room.UpdatedAt().Time().Equal(savedRoom.UpdatedAt().Time()))
 }
 
 func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldUpdateARoomWhenIdExists() {
@@ -371,6 +377,95 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldUpdateARoomWhenIdExists() {
 	assert.Equal(t, room.AdminId().Value(), savedRoom.AdminId().Value())
 	assert.Equal(t, payload.Name, savedRoom.Name().Value())
 	assert.Equal(t, payload.Category, savedRoom.Category().Value())
-	assert.True(t, room.CreatedAt().TimeValue().Equal(*savedRoom.CreatedAt().TimeValue()))
-	assert.True(t, room.UpdatedAt().TimeValue().Before(*savedRoom.UpdatedAt().TimeValue()))
+	assert.True(t, room.CreatedAt().Time().Equal(savedRoom.CreatedAt().Time()))
+	assert.True(t, room.UpdatedAt().Time().Before(savedRoom.UpdatedAt().Time()))
+}
+
+func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+
+	id := valueobject.NewID().Value()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+id, nil)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+}
+
+func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+	sub := s.auth0.GenerateSub()
+	jwt, _ := s.auth0.GenerateJWT(sub)
+
+	id := valueobject.NewID().Value()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+id, nil)
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+}
+
+func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnForbiddenWhenAdminIdIsInvalid() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+	sub := s.auth0.GenerateSub()
+	jwt, _ := s.auth0.GenerateJWT(sub)
+
+	adminId, _ := valueobject.NewAuth0IDWith(s.auth0.GenerateSub())
+	name, _ := valueobject.NewRoomNameWith("Rust")
+	category, _ := valueobject.NewRoomCategoryWith("Tech")
+	room, _ := entity.NewRoom(adminId, name, category)
+	s.roomGateway.Save(s.ctx, room)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+room.Id().Value(), nil)
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	assert.NotNil(t, savedRoom)
+	assert.Nil(t, err)
+}
+
+func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldDeleteARoomWhenIdExists() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+	sub := s.auth0.GenerateSub()
+	jwt, _ := s.auth0.GenerateJWT(sub)
+
+	adminId, _ := valueobject.NewAuth0IDWith(sub)
+	name, _ := valueobject.NewRoomNameWith("Rust")
+	category, _ := valueobject.NewRoomCategoryWith("Tech")
+	room, _ := entity.NewRoom(adminId, name, category)
+	s.roomGateway.Save(s.ctx, room)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+room.Id().Value(), nil)
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	assert.Nil(t, savedRoom)
+	assert.NotNil(t, err)
 }

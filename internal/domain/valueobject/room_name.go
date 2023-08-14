@@ -1,9 +1,6 @@
 package valueobject
 
-import "github.com/sesaquecruz/go-chat-api/internal/domain/errors"
-
-const ErrRequiredRoomName = "room name is required"
-const ErrMaxSizeRoomName = "room name must not have more than 20 characters"
+import "github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 
 type RoomName struct {
 	value string
@@ -11,10 +8,10 @@ type RoomName struct {
 
 func NewRoomNameWith(value string) (*RoomName, error) {
 	if value == "" {
-		return nil, errors.NewValidationError(ErrRequiredRoomName)
+		return nil, validation.ErrRequiredRoomName
 	}
 	if len(value) > 50 {
-		return nil, errors.NewValidationError(ErrMaxSizeRoomName)
+		return nil, validation.ErrMaxSizeRoomName
 	}
 
 	return &RoomName{value: value}, nil
