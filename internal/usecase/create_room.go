@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 )
@@ -58,10 +58,9 @@ func (u *CreateRoomUseCase) Execute(ctx context.Context, input *CreateRoomUseCas
 		return nil, err
 	}
 
-	err = u.roomGateway.Save(ctx, room)
-	if err != nil {
+	if err := u.roomGateway.Save(ctx, room); err != nil {
 		u.logger.Error(err)
-		return nil, errors.NewGatewayError(err.Error())
+		return nil, validation.NewInternalError(err)
 	}
 
 	return &CreateRoomUseCaseOutput{

@@ -2,11 +2,11 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +47,7 @@ func TestCreateRoomUseCase_ShouldCreateANewRoomWhenInputIsValid(t *testing.T) {
 	assert.Equal(t, expectedOutput.RoomId, output.RoomId)
 }
 
-func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenAdminIdIsInvalid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnAnIdErrorWhenAdminIdIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -63,11 +63,10 @@ func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenAdminIdIsInvalid(t *t
 	useCase := NewCreateRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, valueobject.ErrRequiredId)
+	assert.ErrorIs(t, err, validation.ErrRequiredId)
 }
 
-func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenNameIsInvalid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnANameErrorWhenNameIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -83,11 +82,10 @@ func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenNameIsInvalid(t *test
 	useCase := NewCreateRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, valueobject.ErrRequiredRoomName)
+	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
 }
 
-func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenCategoryIsInvalid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnACategoryErrorWhenCategoryIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -103,11 +101,10 @@ func TestCreateRoomUseCase_ShouldReturnAValidationErrorWhenCategoryIsInvalid(t *
 	useCase := NewCreateRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, valueobject.ErrRequiredRoomCategory)
+	assert.ErrorIs(t, err, validation.ErrRequiredRoomCategory)
 }
 
-func TestCreateRoomUseCase_ShouldReturnAGatewayErrorWhenGatewayReturnsAnError(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnAnInternalErrorWhenOccursAGatewayError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -122,13 +119,13 @@ func TestCreateRoomUseCase_ShouldReturnAGatewayErrorWhenGatewayReturnsAnError(t 
 	gateway.
 		EXPECT().
 		Save(gomock.Any(), gomock.Any()).
-		Return(errors.NewGatewayError("gateway error")).
+		Return(validation.NewInternalError(errors.New("a gateway error"))).
 		Times(1)
 
 	useCase := NewCreateRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.GatewayError{}, err)
-	assert.EqualError(t, err, "gateway error")
+	assert.IsType(t, &validation.InternalError{}, err)
+	assert.EqualError(t, err, "a gateway error")
 }

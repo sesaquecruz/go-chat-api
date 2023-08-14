@@ -1,35 +1,31 @@
 package valueobject
 
 import (
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
-
 	"github.com/google/uuid"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 )
 
-const ErrRequiredId = "id is required"
-const ErrInvalidId = "id is invalid"
-
 type ID struct {
-	value string
+	value uuid.UUID
 }
 
 func NewID() *ID {
-	return &ID{value: uuid.NewString()}
+	return &ID{value: uuid.New()}
 }
 
 func NewIDWith(value string) (*ID, error) {
 	if value == "" {
-		return nil, errors.NewValidationError(ErrRequiredId)
+		return nil, validation.ErrRequiredId
 	}
 
 	id, err := uuid.Parse(value)
-	if id == uuid.Nil || err != nil {
-		return nil, errors.NewValidationError(ErrInvalidId)
+	if err != nil || id == uuid.Nil {
+		return nil, validation.ErrInvalidId
 	}
 
-	return &ID{value: id.String()}, nil
+	return &ID{value: id}, nil
 }
 
 func (id *ID) Value() string {
-	return id.value
+	return id.value.String()
 }

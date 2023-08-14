@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
-	domain_errors "github.com/sesaquecruz/go-chat-api/internal/domain/errors"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 )
@@ -58,29 +58,30 @@ func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *UpdateRoomUseCas
 	room, err := u.roomGateway.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain_errors.NewGatewayError(gateway.ErrNotFoundRoom)
+			return validation.ErrNotFoundRoom
 		}
 
 		u.logger.Error(err)
-		return domain_errors.NewGatewayError(err.Error())
+		return validation.NewInternalError(err)
 	}
 
 	if adminId.Value() != room.AdminId().Value() {
-		return domain_errors.NewAuthorizationError("invalid room admin")
+		return validation.ErrInvalidRoomAdmin
 	}
 
 	if err := room.UpdateName(name); err != nil {
 		u.logger.Error(err)
-		return err
+		return validation.NewInternalError(err)
 	}
 
 	if err := room.UpdateCategory(category); err != nil {
 		u.logger.Error(err)
-		return err
+		return validation.NewInternalError(err)
 	}
 
 	if err := u.roomGateway.Update(ctx, room); err != nil {
-		return domain_errors.NewGatewayError(err.Error())
+		u.logger.Error(err)
+		return validation.NewInternalError(err)
 	}
 
 	return nil

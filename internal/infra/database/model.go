@@ -35,12 +35,12 @@ func (r *RoomModel) ToEntity() (*entity.Room, error) {
 		return nil, err
 	}
 
-	created_at, err := valueobject.NewDateTimeWith(r.Created_at)
+	created_at, err := valueobject.NewTimestampWith(r.Created_at)
 	if err != nil {
 		return nil, err
 	}
 
-	updated_at, err := valueobject.NewDateTimeWith(r.Updated_at)
+	updated_at, err := valueobject.NewTimestampWith(r.Updated_at)
 	if err != nil {
 		return nil, err
 	}

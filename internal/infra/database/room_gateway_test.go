@@ -75,8 +75,8 @@ func (s *RoomGatewayTestSuite) TestShouldSaveAndFindARoom() {
 	assert.Equal(t, room.AdminId().Value(), result.AdminId().Value())
 	assert.Equal(t, room.Name().Value(), result.Name().Value())
 	assert.Equal(t, room.Category().Value(), result.Category().Value())
-	assert.Equal(t, room.CreatedAt().StringValue(), result.CreatedAt().StringValue())
-	assert.Equal(t, room.UpdatedAt().StringValue(), result.CreatedAt().StringValue())
+	assert.Equal(t, room.CreatedAt().Value(), result.CreatedAt().Value())
+	assert.Equal(t, room.UpdatedAt().Value(), result.CreatedAt().Value())
 }
 
 func (s *RoomGatewayTestSuite) TestShouldReturnAnErrorWhenFindANonexistentRoom() {

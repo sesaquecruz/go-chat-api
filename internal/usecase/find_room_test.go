@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
-	gateway_pkg "github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
-	"github.com/stretchr/testify/assert"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
@@ -46,11 +45,11 @@ func TestFindRoomUseCase_ShouldReturnARoomWhenRoomIdExists(t *testing.T) {
 	assert.Equal(t, room.AdminId().Value(), output.AdminId)
 	assert.Equal(t, room.Name().Value(), output.Name)
 	assert.Equal(t, room.Category().Value(), output.Category)
-	assert.Equal(t, room.CreatedAt().StringValue(), output.CreatedAt)
-	assert.Equal(t, room.UpdatedAt().StringValue(), output.UpdatedAt)
+	assert.Equal(t, room.CreatedAt().Value(), output.CreatedAt)
+	assert.Equal(t, room.UpdatedAt().Value(), output.UpdatedAt)
 }
 
-func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdDoesNotExist(t *testing.T) {
+func TestFindRoomUseCase_ShouldReturnANotFoundErrorWhenRoomIdDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -73,11 +72,10 @@ func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdDoesNotExist(t *testing.T)
 	useCase := NewFindRoomUseCase(gateway)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.NotNil(t, err)
-	assert.EqualError(t, err, gateway_pkg.ErrNotFoundRoom)
+	assert.ErrorIs(t, err, validation.ErrNotFoundRoom)
 }
 
-func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdIsInvalid(t *testing.T) {
+func TestFindRoomUseCase_ShouldReturnAnIdErrorWhenRoomIdIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -92,6 +90,5 @@ func TestFindRoomUseCase_ShouldReturnAnErrorWhenRoomIdIsInvalid(t *testing.T) {
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.ValidationError{}, err)
-	assert.EqualError(t, err, valueobject.ErrInvalidId)
+	assert.ErrorIs(t, err, validation.ErrInvalidId)
 }

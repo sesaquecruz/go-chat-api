@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
-	gateway_pkg "github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -22,8 +22,8 @@ func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
 	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
-	createdAt := valueobject.NewDateTime()
-	updatedAt, _ := valueobject.NewDateTimeWith(createdAt.StringValue())
+	createdAt := valueobject.NewTimestamp()
+	updatedAt, _ := valueobject.NewTimestampWith(createdAt.Value())
 
 	room, _ := entity.NewRoomWith(
 		id,
@@ -62,8 +62,8 @@ func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
 			assert.Equal(t, adminId.Value(), r.AdminId().Value())
 			assert.Equal(t, input.Name, r.Name().Value())
 			assert.Equal(t, input.Category, r.Category().Value())
-			assert.True(t, createdAt.TimeValue().Equal(*r.CreatedAt().TimeValue()))
-			assert.True(t, updatedAt.TimeValue().Before(*r.UpdatedAt().TimeValue()))
+			assert.True(t, createdAt.Time().Equal(r.CreatedAt().Time()))
+			assert.True(t, updatedAt.Time().Before(r.UpdatedAt().Time()))
 		}).
 		Return(nil).
 		Times(1)
@@ -73,7 +73,7 @@ func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnAGatewayErrorWhenRoomIdDoesNotExist(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnANotFoundErrorWhenRoomIdDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -95,11 +95,10 @@ func TestUpdateRoomUseCase_ShouldReturnAGatewayErrorWhenRoomIdDoesNotExist(t *te
 	useCase := NewUpdateRoomUseCase(gateway)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.GatewayError{}, err)
-	assert.EqualError(t, err, gateway_pkg.ErrNotFoundRoom)
+	assert.ErrorIs(t, err, validation.ErrNotFoundRoom)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnAnAuthorizationErrorWhenAdminIdIsNotRoomAdmin(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnAnAdminErrorWhenAdminIdIsNotRoomAdmin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -107,8 +106,8 @@ func TestUpdateRoomUseCase_ShouldReturnAnAuthorizationErrorWhenAdminIdIsNotRoomA
 	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
-	createdAt := valueobject.NewDateTime()
-	updatedAt, _ := valueobject.NewDateTimeWith(createdAt.StringValue())
+	createdAt := valueobject.NewTimestamp()
+	updatedAt, _ := valueobject.NewTimestampWith(createdAt.Value())
 
 	room, _ := entity.NewRoomWith(
 		id,
@@ -141,11 +140,10 @@ func TestUpdateRoomUseCase_ShouldReturnAnAuthorizationErrorWhenAdminIdIsNotRoomA
 	useCase := NewUpdateRoomUseCase(gateway)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
-	assert.IsType(t, &errors.AuthorizationError{}, err)
-	assert.EqualError(t, err, "invalid room admin")
+	assert.ErrorIs(t, err, validation.ErrInvalidRoomAdmin)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnAnErrorWhenInputIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -160,7 +158,7 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *tes
 				Name:     "",
 				Category: "",
 			},
-			err: errors.NewValidationError(valueobject.ErrInvalidId),
+			err: validation.ErrInvalidId,
 		},
 		{
 			input: &UpdateRoomUseCaseInput{
@@ -169,7 +167,7 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *tes
 				Name:     "",
 				Category: "",
 			},
-			err: errors.NewValidationError(valueobject.ErrInvalidId),
+			err: validation.ErrInvalidId,
 		},
 		{
 			input: &UpdateRoomUseCaseInput{
@@ -178,7 +176,7 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *tes
 				Name:     "",
 				Category: "",
 			},
-			err: errors.NewValidationError(valueobject.ErrRequiredRoomName),
+			err: validation.ErrRequiredRoomName,
 		},
 		{
 			input: &UpdateRoomUseCaseInput{
@@ -187,7 +185,7 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *tes
 				Name:     "Rust",
 				Category: "Anything",
 			},
-			err: errors.NewValidationError(valueobject.ErrInvalidRoomCategory),
+			err: validation.ErrInvalidRoomCategory,
 		},
 	}
 
@@ -197,7 +195,6 @@ func TestUpdateRoomUseCase_ShouldReturnAValidationErrorWhenInputIsInvalid(t *tes
 
 	for _, test := range testCases {
 		err := useCase.Execute(ctx, test.input)
-		assert.IsType(t, &errors.ValidationError{}, err)
-		assert.EqualError(t, err, test.err.Error())
+		assert.ErrorIs(t, err, test.err)
 	}
 }

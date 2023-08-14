@@ -23,6 +23,7 @@ func ApiRouter(
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms/:id", roomHandler.FindRoom)
 	api.PUT("/rooms/:id", roomHandler.UpdateRoom)
+	api.DELETE("/rooms/:id", roomHandler.DeleteRoom)
 
 	return r
 }

@@ -3,7 +3,7 @@ package valueobject
 import (
 	"regexp"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain/errors"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 )
 
 var auth0IDPattern = regexp.MustCompile(`^auth0|[a-fA-F0-9]{24}$`)
@@ -14,11 +14,11 @@ type Auth0ID struct {
 
 func NewAuth0IDWith(value string) (*Auth0ID, error) {
 	if value == "" {
-		return nil, errors.NewValidationError(ErrRequiredId)
+		return nil, validation.ErrRequiredId
 	}
 
 	if !auth0IDPattern.MatchString(value) {
-		return nil, errors.NewValidationError(ErrInvalidId)
+		return nil, validation.ErrInvalidId
 	}
 
 	return &Auth0ID{value: value}, nil
