@@ -21,6 +21,7 @@ func ApiRouter(
 	api := r.Group(cfg.Path)
 
 	api.POST("/rooms", roomHandler.CreateRoom)
+	api.GET("/rooms", roomHandler.SearchRoom)
 	api.GET("/rooms/:id", roomHandler.FindRoom)
 	api.PUT("/rooms/:id", roomHandler.UpdateRoom)
 	api.DELETE("/rooms/:id", roomHandler.DeleteRoom)

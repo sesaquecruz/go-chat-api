@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/sesaquecruz/go-chat-api/internal/domain/entity"
+	search "github.com/sesaquecruz/go-chat-api/internal/domain/search"
 	valueobject "github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -77,6 +78,21 @@ func (m *MockRoomGatewayInterface) Save(ctx context.Context, room *entity.Room) 
 func (mr *MockRoomGatewayInterfaceMockRecorder) Save(ctx, room interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRoomGatewayInterface)(nil).Save), ctx, room)
+}
+
+// Search mocks base method.
+func (m *MockRoomGatewayInterface) Search(ctx context.Context, query *search.Query) (*search.Page[*entity.Room], error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Search", ctx, query)
+	ret0, _ := ret[0].(*search.Page[*entity.Room])
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Search indicates an expected call of Search.
+func (mr *MockRoomGatewayInterfaceMockRecorder) Search(ctx, query interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockRoomGatewayInterface)(nil).Search), ctx, query)
 }
 
 // Update mocks base method.

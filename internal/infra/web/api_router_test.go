@@ -14,6 +14,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/search"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
@@ -71,10 +72,12 @@ func (s *ApiRouterTestSuite) SetupTest() {
 	roomGateway := database.NewRoomGateway(db)
 	createRoomUseCase := usecase.NewCreateRoomUseCase(roomGateway)
 	findRoomUseCase := usecase.NewFindRoomUseCase(roomGateway)
+	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomGateway)
 	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomGateway)
 	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomGateway)
 	roomHandler := NewRoomHandler(
 		createRoomUseCase,
+		searchRoomUseCase,
 		findRoomUseCase,
 		updateRoomUsecase,
 		deleteRoomUseCase,
@@ -169,6 +172,133 @@ func (s *ApiRouterTestSuite) TestCreateRoom_ShouldCreateANewRoom() {
 	assert.Equal(t, sub, room.AdminId().Value())
 	assert.Equal(t, payload.Name, room.Name().Value())
 	assert.Equal(t, payload.Category, room.Category().Value())
+}
+
+func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/rooms", nil)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+}
+
+func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
+	defer s.postgres.ClearDB()
+	t := s.T()
+	r := s.router
+	sub := s.auth0.GenerateSub()
+	jwt, _ := s.auth0.GenerateJWT(sub)
+
+	room1 := createARoom(sub, "Rust", "Tech")
+	room2 := createARoom(sub, "Go", "Tech")
+	room3 := createARoom(sub, "Java", "Tech")
+	room4 := createARoom(sub, "Need for Speed Undergroud", "Game")
+	room5 := createARoom(sub, "Need for Speed Most Wanted", "Game")
+	s.roomGateway.Save(s.ctx, room1)
+	s.roomGateway.Save(s.ctx, room2)
+	s.roomGateway.Save(s.ctx, room3)
+	s.roomGateway.Save(s.ctx, room4)
+	s.roomGateway.Save(s.ctx, room5)
+
+	testCases := []struct {
+		query string
+		page  search.Page[RoomResponseDto]
+	}{
+		{
+			query: "?page=0&size=2&sort=asc&search=tech",
+			page: search.Page[RoomResponseDto]{
+				Page:  0,
+				Size:  2,
+				Total: 3,
+				Items: []RoomResponseDto{
+					{
+						Id:       room2.Id().Value(),
+						Name:     room2.Name().Value(),
+						Category: room2.Category().Value(),
+					},
+					{
+						Id:       room3.Id().Value(),
+						Name:     room3.Name().Value(),
+						Category: room3.Category().Value(),
+					},
+				},
+			},
+		},
+		{
+			query: "?page=1&size=2&sort=asc&search=tech",
+			page: search.Page[RoomResponseDto]{
+				Page:  1,
+				Size:  2,
+				Total: 3,
+				Items: []RoomResponseDto{
+					{
+						Id:       room1.Id().Value(),
+						Name:     room1.Name().Value(),
+						Category: room1.Category().Value(),
+					},
+				},
+			},
+		},
+		{
+			query: "?page=0&size=3&sort=desc&search=speed",
+			page: search.Page[RoomResponseDto]{
+				Page:  0,
+				Size:  3,
+				Total: 2,
+				Items: []RoomResponseDto{
+					{
+						Id:       room4.Id().Value(),
+						Name:     room4.Name().Value(),
+						Category: room4.Category().Value(),
+					},
+					{
+						Id:       room5.Id().Value(),
+						Name:     room5.Name().Value(),
+						Category: room5.Category().Value(),
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/rooms"+test.query, nil)
+		req.Header.Set("Authorization", "Bearer "+jwt)
+
+		r.ServeHTTP(w, req)
+		res := w.Result()
+
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+
+		body, err := io.ReadAll(res.Body)
+		res.Body.Close()
+		assert.Nil(t, err)
+
+		var data search.Page[RoomResponseDto]
+		err = json.Unmarshal(body, &data)
+		assert.Nil(t, err)
+
+		assert.Equal(t, test.page.Page, data.Page)
+		assert.Equal(t, test.page.Size, data.Size)
+		assert.Equal(t, test.page.Total, data.Total)
+		assert.Equal(t, len(test.page.Items), len(data.Items))
+
+		for i := 0; i < len(test.page.Items); i++ {
+			testRoom := test.page.Items[i]
+			dataRoom := data.Items[i]
+
+			assert.Equal(t, testRoom.Id, dataRoom.Id)
+			assert.Equal(t, testRoom.Name, dataRoom.Name)
+			assert.Equal(t, testRoom.Category, dataRoom.Category)
+		}
+	}
 }
 
 func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
@@ -468,4 +598,12 @@ func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldDeleteARoomWhenIdExists() {
 	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
 	assert.Nil(t, savedRoom)
 	assert.NotNil(t, err)
+}
+
+func createARoom(adminId, name, category string) *entity.Room {
+	roomAdminId, _ := valueobject.NewAuth0IDWith(adminId)
+	roomName, _ := valueobject.NewRoomNameWith(name)
+	roomCategory, _ := valueobject.NewRoomCategoryWith(category)
+	room, _ := entity.NewRoom(roomAdminId, roomName, roomCategory)
+	return room
 }

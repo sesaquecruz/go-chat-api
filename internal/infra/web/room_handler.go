@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/search"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -16,12 +18,14 @@ import (
 type RoomHandlerInterface interface {
 	CreateRoom(c *gin.Context)
 	FindRoom(c *gin.Context)
+	SearchRoom(c *gin.Context)
 	UpdateRoom(c *gin.Context)
 	DeleteRoom(c *gin.Context)
 }
 
 type RoomHandler struct {
 	createRoomUseCase usecase.CreateRoomUseCaseInterface
+	searchRoomUseCase usecase.SearchRoomUseCaseInterface
 	findRoomUseCase   usecase.FindRoomUseCaseInterface
 	updateRoomUseCase usecase.UpdateRoomUseCaseInterface
 	deleteRoomUseCase usecase.DeleteRoomUseCaseInterface
@@ -30,12 +34,14 @@ type RoomHandler struct {
 
 func NewRoomHandler(
 	createRoomUseCase usecase.CreateRoomUseCaseInterface,
+	searchRoomUseCase usecase.SearchRoomUseCaseInterface,
 	findRoomUseCase usecase.FindRoomUseCaseInterface,
 	updateRoomUseCase usecase.UpdateRoomUseCaseInterface,
 	deleteRoomUseCase usecase.DeleteRoomUseCaseInterface,
 ) *RoomHandler {
 	return &RoomHandler{
 		createRoomUseCase: createRoomUseCase,
+		searchRoomUseCase: searchRoomUseCase,
 		findRoomUseCase:   findRoomUseCase,
 		updateRoomUseCase: updateRoomUseCase,
 		deleteRoomUseCase: deleteRoomUseCase,
@@ -75,6 +81,37 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 
 	c.Header("Location", fmt.Sprintf("%s/%s", c.Request.URL, output.RoomId))
 	c.Status(http.StatusCreated)
+}
+
+func (h *RoomHandler) SearchRoom(c *gin.Context) {
+	input := usecase.SearchRoomUseCaseInput{
+		Page:   c.Query("page"),
+		Size:   c.Query("size"),
+		Sort:   c.Query("sort"),
+		Search: c.Query("search"),
+	}
+
+	output, err := h.searchRoomUseCase.Execute(c.Request.Context(), &input)
+	if err != nil {
+		if _, ok := err.(*validation.InternalError); ok {
+			h.logger.Error(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+
+	page := search.MapPage[*entity.Room, RoomResponseDto](output, func(r *entity.Room) RoomResponseDto {
+		return RoomResponseDto{
+			Id:       r.Id().Value(),
+			Name:     r.Name().Value(),
+			Category: r.Category().Value(),
+		}
+	})
+
+	c.JSON(http.StatusOK, *page)
 }
 
 func (h *RoomHandler) FindRoom(c *gin.Context) {
