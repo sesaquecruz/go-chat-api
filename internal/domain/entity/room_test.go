@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRoom_ShouldCreateANewRoomWhenValuesAreNotNil(t *testing.T) {
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+func TestRoom_ShouldCreateARoomWhenDataAreValid(t *testing.T) {
+	id := valueobject.NewId()
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Golang")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	createdAt := valueobject.NewTimestamp()
@@ -20,7 +20,6 @@ func TestRoom_ShouldCreateANewRoomWhenValuesAreNotNil(t *testing.T) {
 	room, err := NewRoom(adminId, name, category)
 	assert.NotNil(t, room)
 	assert.Nil(t, err)
-	assert.Nil(t, room.Validate())
 	assert.NotNil(t, room.Id())
 	assert.NotNil(t, room.AdminId())
 	assert.NotNil(t, room.Name())
@@ -34,7 +33,6 @@ func TestRoom_ShouldCreateANewRoomWhenValuesAreNotNil(t *testing.T) {
 	room, err = NewRoomWith(id, adminId, name, category, createdAt, updateAt)
 	assert.NotNil(t, room)
 	assert.Nil(t, err)
-	assert.Nil(t, room.Validate())
 	assert.NotNil(t, room.Id())
 	assert.NotNil(t, room.AdminId())
 	assert.NotNil(t, room.Name())
@@ -49,153 +47,153 @@ func TestRoom_ShouldCreateANewRoomWhenValuesAreNotNil(t *testing.T) {
 	assert.Equal(t, updateAt.Value(), room.UpdatedAt().Value())
 }
 
-func TestRoom_ShouldReturnARequireIdErrorWhenIdIsNil(t *testing.T) {
-	room, err := NewRoomWith(nil, nil, nil, nil, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomId)
-}
-
-func TestRoom_ShouldReturnARequireAdminIdErrorWhenAdminIdIsNil(t *testing.T) {
-	id := valueobject.NewID()
-
-	room, err := NewRoom(nil, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomAdminId)
-
-	room, err = NewRoomWith(id, nil, nil, nil, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomAdminId)
-}
-
-func TestRoom_ShouldReturnARequireNameErrorWhenNameIsNil(t *testing.T) {
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
-
-	room, err := NewRoom(adminId, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
-
-	room, err = NewRoomWith(id, adminId, nil, nil, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
-}
-
-func TestRoom_ShouldReturnARequireCategoryErrorWhenCategoryIsNil(t *testing.T) {
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
-	name, _ := valueobject.NewRoomNameWith("Golang")
-
-	room, err := NewRoom(adminId, name, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomCategory)
-
-	room, err = NewRoomWith(id, adminId, name, nil, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomCategory)
-}
-
-func TestRoom_ShouldReturnARequireCreatedAtErrorWhenCreatedAtIsNil(t *testing.T) {
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
-	name, _ := valueobject.NewRoomNameWith("Golang")
-	category, _ := valueobject.NewRoomCategoryWith("Tech")
-
-	room, err := NewRoomWith(id, adminId, name, category, nil, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomCreatedAt)
-}
-
-func TestRoom_ShouldReturnARequireUpdatedAtErrorWhenUpdatedAtIsNil(t *testing.T) {
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+func TestRoom_ShouldReturnAnErrorWhenCreateARoomWithInvalidData(t *testing.T) {
+	id := valueobject.NewId()
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Golang")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	createdAt := valueobject.NewTimestamp()
+	updatedAt := valueobject.NewTimestamp()
 
-	room, err := NewRoomWith(id, adminId, name, category, createdAt, nil)
-	assert.Nil(t, room)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomUpdatedAt)
+	testCases := []struct {
+		testName  string
+		errNew    error
+		errWith   error
+		id        *valueobject.Id
+		adminId   *valueobject.UserId
+		name      *valueobject.RoomName
+		category  *valueobject.RoomCategory
+		createdAt *valueobject.Timestamp
+		updatedAt *valueobject.Timestamp
+	}{
+		{
+			"nil id",
+			nil,
+			validation.ErrRequiredRoomId,
+			nil,
+			adminId,
+			name,
+			category,
+			createdAt,
+			updatedAt,
+		},
+		{
+			"nil admin id",
+			validation.ErrRequiredRoomAdminId,
+			validation.ErrRequiredRoomAdminId,
+			id,
+			nil,
+			name,
+			category,
+			createdAt,
+			updatedAt,
+		},
+		{
+			"nil room name",
+			validation.ErrRequiredRoomName,
+			validation.ErrRequiredRoomName,
+			id,
+			adminId,
+			nil,
+			category,
+			createdAt,
+			updatedAt,
+		},
+		{
+			"nil room category",
+			validation.ErrRequiredRoomCategory,
+			validation.ErrRequiredRoomCategory,
+			id,
+			adminId,
+			name,
+			nil,
+			createdAt,
+			updatedAt,
+		},
+		{
+			"nil created at",
+			nil,
+			validation.ErrRequiredRoomCreatedAt,
+			id,
+			adminId,
+			name,
+			category,
+			nil,
+			updatedAt,
+		},
+		{
+			"nil updated at",
+			nil,
+			validation.ErrRequiredRoomUpdatedAt,
+			id,
+			adminId,
+			name,
+			category,
+			createdAt,
+			nil,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.testName, func(t *testing.T) {
+			_, err := NewRoom(
+				test.adminId,
+				test.name,
+				test.category,
+			)
+			assert.Equal(t, test.errNew, err)
+
+			_, err = NewRoomWith(
+				test.id,
+				test.adminId,
+				test.name,
+				test.category,
+				test.createdAt,
+				test.updatedAt,
+			)
+			assert.Equal(t, test.errWith, err)
+		})
+	}
 }
 
-func TestRoom_ShouldUpdateRoomNameWhenNameIsNotNil(t *testing.T) {
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+func TestRoom_ShouldUpdateRoomWhenDateAreValid(t *testing.T) {
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Golang")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
-
-	room, err := NewRoom(adminId, name, category)
-	assert.NotNil(t, room)
-	assert.Nil(t, err)
+	room, _ := NewRoom(adminId, name, category)
 
 	updatedAt := room.UpdatedAt()
 	newName, _ := valueobject.NewRoomNameWith("Rust")
-
-	err = room.UpdateName(newName)
+	err := room.UpdateName(newName)
 	assert.Nil(t, err)
 	assert.Equal(t, newName.Value(), room.Name().Value())
-	assert.True(t, room.updatedAt.Time().After(updatedAt.Time()))
-}
+	assert.True(t, room.updatedAt.Value().After(updatedAt.Value()))
 
-func TestRoom_ShouldReturnARequiredNameErrorWhenNewNameNil(t *testing.T) {
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
-	name, _ := valueobject.NewRoomNameWith("Golang")
-	category, _ := valueobject.NewRoomCategoryWith("Tech")
-
-	room, err := NewRoom(adminId, name, category)
-	assert.NotNil(t, room)
-	assert.Nil(t, err)
-
-	updatedAt := room.UpdatedAt()
-	oldName := room.Name()
-
-	err = room.UpdateName(nil)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
-	assert.Equal(t, oldName.Value(), room.Name().Value())
-	assert.True(t, room.updatedAt.Time().Equal(updatedAt.Time()))
-}
-
-func TestRoom_ShouldUpdateRoomCategoryWhenCategoryIsNotNil(t *testing.T) {
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
-	name, _ := valueobject.NewRoomNameWith("Golang")
-	category, _ := valueobject.NewRoomCategoryWith("Tech")
-
-	room, err := NewRoom(adminId, name, category)
-	assert.NotNil(t, room)
-	assert.Nil(t, err)
-
-	updatedAt := room.UpdatedAt()
+	updatedAt = room.UpdatedAt()
 	newCategory, _ := valueobject.NewRoomCategoryWith("Science")
-
 	err = room.UpdateCategory(newCategory)
 	assert.Nil(t, err)
 	assert.Equal(t, newCategory.Value(), room.Category().Value())
-	assert.True(t, room.updatedAt.Time().After(updatedAt.Time()))
+	assert.True(t, room.updatedAt.Value().After(updatedAt.Value()))
 }
 
-func TestRoom_ShouldReturnARequiredCategoryErrorWhenNewCategoryNil(t *testing.T) {
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+func TestRoom_ShouldReturnAnErrorWhenUpdateRoomWithInvalidData(t *testing.T) {
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Golang")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
-
-	room, err := NewRoom(adminId, name, category)
-	assert.NotNil(t, room)
-	assert.Nil(t, err)
+	room, _ := NewRoom(adminId, name, category)
 
 	updatedAt := room.UpdatedAt()
-	oldCategory := room.Category()
+	err := room.UpdateName(nil)
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
+	assert.Equal(t, name.Value(), room.Name().Value())
+	assert.True(t, room.updatedAt.Value().Equal(updatedAt.Value()))
 
+	updatedAt = room.UpdatedAt()
 	err = room.UpdateCategory(nil)
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, validation.ErrRequiredRoomCategory)
-	assert.Equal(t, oldCategory.Value(), room.Category().Value())
-	assert.True(t, room.updatedAt.Time().Equal(updatedAt.Time()))
+	assert.Equal(t, category.Value(), room.Category().Value())
+	assert.True(t, room.updatedAt.Value().Equal(updatedAt.Value()))
 }

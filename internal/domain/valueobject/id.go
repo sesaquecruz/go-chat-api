@@ -5,15 +5,16 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 )
 
-type ID struct {
-	value uuid.UUID
+type Id struct {
+	value string
 }
 
-func NewID() *ID {
-	return &ID{value: uuid.New()}
+func NewId() *Id {
+	id, _ := NewIdWith(uuid.New().String())
+	return id
 }
 
-func NewIDWith(value string) (*ID, error) {
+func NewIdWith(value string) (*Id, error) {
 	if value == "" {
 		return nil, validation.ErrRequiredId
 	}
@@ -23,9 +24,9 @@ func NewIDWith(value string) (*ID, error) {
 		return nil, validation.ErrInvalidId
 	}
 
-	return &ID{value: id}, nil
+	return &Id{value: id.String()}, nil
 }
 
-func (id *ID) Value() string {
-	return id.value.String()
+func (id *Id) Value() string {
+	return id.value
 }

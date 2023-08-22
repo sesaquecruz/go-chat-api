@@ -10,6 +10,7 @@ import (
 func ApiRouter(
 	cfg *config.APIConfig,
 	roomHandler RoomHandlerInterface,
+	messageHandler MessageHandlerInterface,
 ) *gin.Engine {
 	gin.SetMode(cfg.Mode)
 
@@ -25,6 +26,8 @@ func ApiRouter(
 	api.GET("/rooms/:id", roomHandler.FindRoom)
 	api.PUT("/rooms/:id", roomHandler.UpdateRoom)
 	api.DELETE("/rooms/:id", roomHandler.DeleteRoom)
+
+	api.POST("/messages", messageHandler.CreateMessage)
 
 	return r
 }

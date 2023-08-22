@@ -9,14 +9,12 @@ import (
 const timestampLayout = "2006-01-02T15:04:05.999999Z"
 
 type Timestamp struct {
-	value *time.Time
+	value time.Time
 }
 
 func NewTimestamp() *Timestamp {
-	now, _ := time.Parse(timestampLayout, time.Now().UTC().Format(timestampLayout))
-	return &Timestamp{
-		value: &now,
-	}
+	timestamp, _ := NewTimestampWith(time.Now().UTC().Format(timestampLayout))
+	return timestamp
 }
 
 func NewTimestampWith(value string) (*Timestamp, error) {
@@ -31,15 +29,13 @@ func NewTimestampWith(value string) (*Timestamp, error) {
 
 	t = t.UTC()
 
-	return &Timestamp{
-		value: &t,
-	}, nil
+	return &Timestamp{value: t}, nil
 }
 
-func (t *Timestamp) Value() string {
+func (t *Timestamp) Value() time.Time {
+	return t.value
+}
+
+func (t *Timestamp) String() string {
 	return t.value.Format(timestampLayout)
-}
-
-func (t *Timestamp) Time() time.Time {
-	return *t.value
 }

@@ -3,20 +3,21 @@ package web
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/search"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository/pagination"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/test"
 
@@ -27,54 +28,49 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var dbApi, _ = test.NewPostgresContainer(context.Background(), "file://../../../")
+var brokerApi, _ = test.NewRabbitmqContainer(context.Background(), "../../../")
+var authApi = test.NewAuth0Server()
+
 type ApiRouterTestSuite struct {
 	suite.Suite
-	ctx         context.Context
-	postgres    *test.PostgresContainer
-	auth0       *test.Auth0Server
-	roomGateway gateway.RoomGatewayInterface
-	router      *gin.Engine
+	ctx               context.Context
+	roomRepository    repository.RoomRepositoryInterface
+	messageRepository repository.MessageRepositoryInterface
+	messageGateway    gateway.MessageGatewayInterface
+	router            *gin.Engine
 }
 
 func (s *ApiRouterTestSuite) SetupTest() {
-	ctx := context.Background()
-	postgres, err := test.NewPostgresContainer(ctx, "file://../../../migrations")
-	if err != nil {
-		log.Fatal(err)
-	}
+	dbApi.Clear()
 
-	db, err := sql.Open("postgres", postgres.DSN)
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := database.DbConnection(&config.DatabaseConfig{
+		Host:     dbApi.Host,
+		Port:     dbApi.Port,
+		User:     dbApi.User,
+		Password: dbApi.Password,
+		Name:     dbApi.Name,
+	})
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+	conn := event.BrokerConnection(&config.BrokerConfig{
+		Host:     brokerApi.Host,
+		Port:     brokerApi.Port,
+		User:     brokerApi.User,
+		Password: brokerApi.Password,
+	})
 
-	postgres.ClearDB()
+	roomRepository := database.NewRoomRepository(db)
+	messageRepository := database.NewMessageRepository(db)
 
-	auth0 := test.NewAuth0Server()
-	go func() {
-		auth0.Run()
-	}()
+	messageGateway := event.NewMessageGateway(conn)
 
-	cfg := config.APIConfig{
-		Port:         "",
-		Path:         "/api/v1",
-		Mode:         "release",
-		AllowOrigins: "*",
-		JwtIssuer:    auth0.GetIssuer(),
-		JwtAudience:  auth0.GetAudience(),
-	}
+	createRoomUseCase := usecase.NewCreateRoomUseCase(roomRepository)
+	findRoomUseCase := usecase.NewFindRoomUseCase(roomRepository)
+	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomRepository)
+	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomRepository)
+	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomRepository)
+	createMessageUseCase := usecase.NewCreateMessageUseCase(roomRepository, messageRepository, messageGateway)
 
-	roomGateway := database.NewRoomGateway(db)
-	createRoomUseCase := usecase.NewCreateRoomUseCase(roomGateway)
-	findRoomUseCase := usecase.NewFindRoomUseCase(roomGateway)
-	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomGateway)
-	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomGateway)
-	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomGateway)
 	roomHandler := NewRoomHandler(
 		createRoomUseCase,
 		searchRoomUseCase,
@@ -83,21 +79,39 @@ func (s *ApiRouterTestSuite) SetupTest() {
 		deleteRoomUseCase,
 	)
 
-	apiRouter := ApiRouter(&cfg, roomHandler)
+	messageHandler := NewMessageHandler(
+		createMessageUseCase,
+	)
 
-	s.ctx = ctx
-	s.postgres = postgres
-	s.auth0 = auth0
-	s.roomGateway = roomGateway
+	apiRouter := ApiRouter(&config.APIConfig{
+		Port:         "",
+		Path:         "/api/v1",
+		Mode:         "release",
+		AllowOrigins: "*",
+		JwtIssuer:    authApi.GetIssuer(),
+		JwtAudience:  authApi.GetAudience(),
+	},
+		roomHandler,
+		messageHandler,
+	)
+
+	s.ctx = context.Background()
+	s.roomRepository = roomRepository
+	s.messageRepository = messageRepository
+	s.messageGateway = messageGateway
 	s.router = apiRouter
 }
 
 func (s *ApiRouterTestSuite) TearDownSuite() {
-	if err := s.postgres.Terminate(s.ctx); err != nil {
-		s.T().Fatalf("error terminating postgres container: %s", err)
+	if err := brokerApi.Terminate(s.ctx); err != nil {
+		s.T().Fatalf("error terminating broker container: %s", err)
 	}
 
-	if err := s.auth0.Stop(s.ctx); err != nil {
+	if err := dbApi.Terminate(s.ctx); err != nil {
+		s.T().Fatalf("error terminating database container: %s", err)
+	}
+
+	if err := authApi.Terminate(s.ctx); err != nil {
 		s.T().Fatalf("error terminating auth0 server: %s", err)
 	}
 }
@@ -107,7 +121,7 @@ func TestApiRouterTestSuite(t *testing.T) {
 }
 
 func (s *ApiRouterTestSuite) TestReturnAllowOrigins() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
@@ -122,7 +136,7 @@ func (s *ApiRouterTestSuite) TestReturnAllowOrigins() {
 }
 
 func (s *ApiRouterTestSuite) TestCreateRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
@@ -135,12 +149,12 @@ func (s *ApiRouterTestSuite) TestCreateRoom_ShouldReturnUnauthorizedWhenUnauthen
 	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 }
 
-func (s *ApiRouterTestSuite) TestCreateRoom_ShouldCreateANewRoom() {
-	defer s.postgres.ClearDB()
+func (s *ApiRouterTestSuite) TestCreateRoom_ShouldCreateARoom() {
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
 	payload := struct {
 		Name     string `json:"name"`
@@ -164,10 +178,10 @@ func (s *ApiRouterTestSuite) TestCreateRoom_ShouldCreateANewRoom() {
 	location := res.Header.Get("Location")
 	assert.NotEmpty(t, location)
 
-	id, err := valueobject.NewIDWith(location[len("/api/v1/rooms/"):])
+	id, err := valueobject.NewIdWith(location[len("/api/v1/rooms/"):])
 	assert.Nil(t, err)
 
-	room, err := s.roomGateway.FindById(s.ctx, id)
+	room, err := s.roomRepository.FindById(s.ctx, id)
 	assert.Nil(t, err)
 	assert.Equal(t, sub, room.AdminId().Value())
 	assert.Equal(t, payload.Name, room.Name().Value())
@@ -175,7 +189,7 @@ func (s *ApiRouterTestSuite) TestCreateRoom_ShouldCreateANewRoom() {
 }
 
 func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
@@ -189,30 +203,30 @@ func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnUnauthorizedWhenUnauthen
 }
 
 func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
 	room1 := createARoom(sub, "Rust", "Tech")
 	room2 := createARoom(sub, "Go", "Tech")
 	room3 := createARoom(sub, "Java", "Tech")
 	room4 := createARoom(sub, "Need for Speed Undergroud", "Game")
 	room5 := createARoom(sub, "Need for Speed Most Wanted", "Game")
-	s.roomGateway.Save(s.ctx, room1)
-	s.roomGateway.Save(s.ctx, room2)
-	s.roomGateway.Save(s.ctx, room3)
-	s.roomGateway.Save(s.ctx, room4)
-	s.roomGateway.Save(s.ctx, room5)
+	s.roomRepository.Save(s.ctx, room1)
+	s.roomRepository.Save(s.ctx, room2)
+	s.roomRepository.Save(s.ctx, room3)
+	s.roomRepository.Save(s.ctx, room4)
+	s.roomRepository.Save(s.ctx, room5)
 
 	testCases := []struct {
 		query string
-		page  search.Page[RoomResponseDto]
+		page  pagination.Page[RoomResponseDto]
 	}{
 		{
 			query: "?page=0&size=2&sort=asc&search=tech",
-			page: search.Page[RoomResponseDto]{
+			page: pagination.Page[RoomResponseDto]{
 				Page:  0,
 				Size:  2,
 				Total: 3,
@@ -232,7 +246,7 @@ func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
 		},
 		{
 			query: "?page=1&size=2&sort=asc&search=tech",
-			page: search.Page[RoomResponseDto]{
+			page: pagination.Page[RoomResponseDto]{
 				Page:  1,
 				Size:  2,
 				Total: 3,
@@ -247,7 +261,7 @@ func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
 		},
 		{
 			query: "?page=0&size=3&sort=desc&search=speed",
-			page: search.Page[RoomResponseDto]{
+			page: pagination.Page[RoomResponseDto]{
 				Page:  0,
 				Size:  3,
 				Total: 2,
@@ -281,7 +295,7 @@ func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
 		res.Body.Close()
 		assert.Nil(t, err)
 
-		var data search.Page[RoomResponseDto]
+		var data pagination.Page[RoomResponseDto]
 		err = json.Unmarshal(body, &data)
 		assert.Nil(t, err)
 
@@ -302,11 +316,11 @@ func (s *ApiRouterTestSuite) TestSearchRoom_ShouldReturnRoomPages() {
 }
 
 func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
-	id := valueobject.NewID().Value()
+	id := valueobject.NewId().Value()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/rooms/"+id, nil)
@@ -318,10 +332,10 @@ func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnUnauthorizedWhenUnauthenti
 }
 
 func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	jwt, _ := s.auth0.GenerateJWT(s.auth0.GenerateSub())
+	jwt, _ := authApi.GenerateJWT(authApi.GenerateSub())
 
 	testCases := []struct {
 		id      string
@@ -332,7 +346,7 @@ func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotE
 			expCode: http.StatusNotFound,
 		},
 		{
-			id:      valueobject.NewID().Value(),
+			id:      valueobject.NewId().Value(),
 			expCode: http.StatusNotFound,
 		},
 	}
@@ -350,16 +364,16 @@ func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnNotFoundWhenRoomIdDoesNotE
 }
 
 func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnARoomWhenIdExists() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	jwt, _ := s.auth0.GenerateJWT(s.auth0.GenerateSub())
+	jwt, _ := authApi.GenerateJWT(authApi.GenerateSub())
 
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	room, _ := entity.NewRoom(adminId, name, category)
-	s.roomGateway.Save(s.ctx, room)
+	s.roomRepository.Save(s.ctx, room)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/rooms/"+room.Id().Value(), nil)
@@ -384,11 +398,11 @@ func (s *ApiRouterTestSuite) TestFindRoom_ShouldReturnARoomWhenIdExists() {
 }
 
 func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
-	id := valueobject.NewID().Value()
+	id := valueobject.NewId().Value()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPut, "/api/v1/rooms/"+id, nil)
@@ -400,13 +414,13 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnUnauthorizedWhenUnauthen
 }
 
 func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	id := valueobject.NewID().Value()
+	id := valueobject.NewId().Value()
 
 	payload := struct {
 		Name     string `json:"name"`
@@ -429,17 +443,17 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnNotFoundWhenRoomIdDoesNo
 }
 
 func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnForbiddenWhenAdminIdIsInvalid() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	adminId, _ := valueobject.NewAuth0IDWith(s.auth0.GenerateSub())
+	adminId, _ := valueobject.NewUserIdWith(authApi.GenerateSub())
 	name, _ := valueobject.NewRoomNameWith("Rust")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	room, _ := entity.NewRoom(adminId, name, category)
-	s.roomGateway.Save(s.ctx, room)
+	s.roomRepository.Save(s.ctx, room)
 
 	payload := struct {
 		Name     string `json:"name"`
@@ -460,28 +474,28 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldReturnForbiddenWhenAdminIdIsIn
 
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
-	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	savedRoom, err := s.roomRepository.FindById(s.ctx, room.Id())
 	assert.NotNil(t, savedRoom)
 	assert.Nil(t, err)
 	assert.Equal(t, room.AdminId().Value(), savedRoom.AdminId().Value())
 	assert.Equal(t, room.Name().Value(), savedRoom.Name().Value())
 	assert.Equal(t, room.Category().Value(), savedRoom.Category().Value())
-	assert.True(t, room.CreatedAt().Time().Equal(savedRoom.CreatedAt().Time()))
-	assert.True(t, room.UpdatedAt().Time().Equal(savedRoom.UpdatedAt().Time()))
+	assert.True(t, room.CreatedAt().Value().Equal(savedRoom.CreatedAt().Value()))
+	assert.True(t, room.UpdatedAt().Value().Equal(savedRoom.UpdatedAt().Value()))
 }
 
 func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldUpdateARoomWhenIdExists() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	adminId, _ := valueobject.NewAuth0IDWith(sub)
+	adminId, _ := valueobject.NewUserIdWith(sub)
 	name, _ := valueobject.NewRoomNameWith("Rust")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	room, _ := entity.NewRoom(adminId, name, category)
-	s.roomGateway.Save(s.ctx, room)
+	s.roomRepository.Save(s.ctx, room)
 
 	payload := struct {
 		Name     string `json:"name"`
@@ -502,21 +516,21 @@ func (s *ApiRouterTestSuite) TestUpdateRoom_ShouldUpdateARoomWhenIdExists() {
 
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
-	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	savedRoom, err := s.roomRepository.FindById(s.ctx, room.Id())
 	assert.Nil(t, err)
 	assert.Equal(t, room.AdminId().Value(), savedRoom.AdminId().Value())
 	assert.Equal(t, payload.Name, savedRoom.Name().Value())
 	assert.Equal(t, payload.Category, savedRoom.Category().Value())
-	assert.True(t, room.CreatedAt().Time().Equal(savedRoom.CreatedAt().Time()))
-	assert.True(t, room.UpdatedAt().Time().Before(savedRoom.UpdatedAt().Time()))
+	assert.True(t, room.CreatedAt().Value().Equal(savedRoom.CreatedAt().Value()))
+	assert.True(t, room.UpdatedAt().Value().Before(savedRoom.UpdatedAt().Value()))
 }
 
 func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnUnauthorizedWhenUnauthenticated() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
 
-	id := valueobject.NewID().Value()
+	id := valueobject.NewId().Value()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+id, nil)
@@ -528,13 +542,13 @@ func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnUnauthorizedWhenUnauthen
 }
 
 func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnNotFoundWhenRoomIdDoesNotExist() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	id := valueobject.NewID().Value()
+	id := valueobject.NewId().Value()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+id, nil)
@@ -547,17 +561,17 @@ func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnNotFoundWhenRoomIdDoesNo
 }
 
 func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnForbiddenWhenAdminIdIsInvalid() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	adminId, _ := valueobject.NewAuth0IDWith(s.auth0.GenerateSub())
+	adminId, _ := valueobject.NewUserIdWith(authApi.GenerateSub())
 	name, _ := valueobject.NewRoomNameWith("Rust")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	room, _ := entity.NewRoom(adminId, name, category)
-	s.roomGateway.Save(s.ctx, room)
+	s.roomRepository.Save(s.ctx, room)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+room.Id().Value(), nil)
@@ -568,23 +582,23 @@ func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldReturnForbiddenWhenAdminIdIsIn
 
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
-	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	savedRoom, err := s.roomRepository.FindById(s.ctx, room.Id())
 	assert.NotNil(t, savedRoom)
 	assert.Nil(t, err)
 }
 
 func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldDeleteARoomWhenIdExists() {
-	defer s.postgres.ClearDB()
+	defer dbApi.Clear()
 	t := s.T()
 	r := s.router
-	sub := s.auth0.GenerateSub()
-	jwt, _ := s.auth0.GenerateJWT(sub)
+	sub := authApi.GenerateSub()
+	jwt, _ := authApi.GenerateJWT(sub)
 
-	adminId, _ := valueobject.NewAuth0IDWith(sub)
+	adminId, _ := valueobject.NewUserIdWith(sub)
 	name, _ := valueobject.NewRoomNameWith("Rust")
 	category, _ := valueobject.NewRoomCategoryWith("Tech")
 	room, _ := entity.NewRoom(adminId, name, category)
-	s.roomGateway.Save(s.ctx, room)
+	s.roomRepository.Save(s.ctx, room)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+room.Id().Value(), nil)
@@ -595,13 +609,100 @@ func (s *ApiRouterTestSuite) TestDeleteRoom_ShouldDeleteARoomWhenIdExists() {
 
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
-	savedRoom, err := s.roomGateway.FindById(s.ctx, room.Id())
+	savedRoom, err := s.roomRepository.FindById(s.ctx, room.Id())
 	assert.Nil(t, savedRoom)
 	assert.NotNil(t, err)
 }
 
+func (s *ApiRouterTestSuite) TestCreateMessage_ShouldReturnUnauthorizedWhenUnauthenticated() {
+	defer dbApi.Clear()
+	t := s.T()
+	r := s.router
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", nil)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+}
+
+func (s *ApiRouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
+	defer dbApi.Clear()
+	t := s.T()
+	r := s.router
+	sub := authApi.GenerateSub()
+	user := authApi.GetNickname()
+	jwt, _ := authApi.GenerateJWT(sub)
+
+	adminId, _ := valueobject.NewUserIdWith(sub)
+	name, _ := valueobject.NewRoomNameWith("Rust")
+	category, _ := valueobject.NewRoomCategoryWith("Tech")
+	room, _ := entity.NewRoom(adminId, name, category)
+	s.roomRepository.Save(s.ctx, room)
+
+	payload := struct {
+		RoomId string `json:"room_id"`
+		Text   string `json:"text"`
+	}{
+		room.Id().Value(),
+		"A simple text",
+	}
+
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+
+	location := res.Header.Get("Location")
+	assert.NotEmpty(t, location)
+
+	id, err := valueobject.NewIdWith(location[len("/api/v1/messages/"):])
+	assert.Nil(t, err)
+
+	message, err := s.messageRepository.FindById(s.ctx, id)
+	assert.Nil(t, err)
+	assert.Equal(t, payload.RoomId, message.RoomId().Value())
+	assert.Equal(t, sub, message.SenderId().Value())
+	assert.Equal(t, user, message.SenderName().Value())
+	assert.Equal(t, payload.Text, message.Text().Value())
+
+	msgs, err := s.messageGateway.Receive()
+	assert.Nil(t, err)
+
+	var data event.MessageEvent
+
+	select {
+	case msg := <-msgs:
+		err := json.Unmarshal(msg.Body, &data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = msg.Ack(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second * 5):
+		t.FailNow()
+	}
+
+	assert.Equal(t, message.Id().Value(), data.Id)
+	assert.Equal(t, message.RoomId().Value(), data.RoomId)
+	assert.Equal(t, message.SenderId().Value(), data.SenderId)
+	assert.Equal(t, message.SenderName().Value(), data.SenderName)
+	assert.Equal(t, message.Text().Value(), data.Text)
+	assert.Equal(t, message.CreatedAt().String(), data.CreatedAt)
+}
+
 func createARoom(adminId, name, category string) *entity.Room {
-	roomAdminId, _ := valueobject.NewAuth0IDWith(adminId)
+	roomAdminId, _ := valueobject.NewUserIdWith(adminId)
 	roomName, _ := valueobject.NewRoomNameWith(name)
 	roomCategory, _ := valueobject.NewRoomCategoryWith(category)
 	room, _ := entity.NewRoom(roomAdminId, roomName, roomCategory)

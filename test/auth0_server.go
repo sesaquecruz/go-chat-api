@@ -16,6 +16,18 @@ import (
 	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
+type Claims struct {
+	jwt.Claims
+	Issuer    string           `json:"iss,omitempty"`
+	Subject   string           `json:"sub,omitempty"`
+	Audience  jwt.Audience     `json:"aud,omitempty"`
+	Expiry    *jwt.NumericDate `json:"exp,omitempty"`
+	NotBefore *jwt.NumericDate `json:"nbf,omitempty"`
+	IssuedAt  *jwt.NumericDate `json:"iat,omitempty"`
+	ID        string           `json:"jti,omitempty"`
+	Nickname  string           `json:"https://nickname.com"`
+}
+
 type Auth0Server struct {
 	signer jose.Signer
 	host   string
@@ -92,6 +104,10 @@ func NewAuth0Server() *Auth0Server {
 		Handler: handler,
 	}
 
+	go func() {
+		server.ListenAndServe()
+	}()
+
 	return &Auth0Server{
 		signer: signer,
 		host:   host,
@@ -108,15 +124,20 @@ func (s *Auth0Server) GetAudience() string {
 	return s.host + "/userinfo"
 }
 
+func (s *Auth0Server) GetNickname() string {
+	return "username"
+}
+
 func (s *Auth0Server) GenerateSub() string {
 	return fmt.Sprintf("auth0|%s", strings.ReplaceAll(uuid.NewString(), "-", "")[:24])
 }
 
 func (s *Auth0Server) GenerateJWT(subject string) (string, error) {
-	claims := jwt.Claims{
+	claims := Claims{
 		Issuer:   s.GetIssuer(),
 		Audience: []string{s.GetAudience()},
 		Subject:  subject,
+		Nickname: s.GetNickname(),
 	}
 
 	token, err := jwt.Signed(s.signer).Claims(claims).CompactSerialize()
@@ -127,16 +148,7 @@ func (s *Auth0Server) GenerateJWT(subject string) (string, error) {
 	return token, err
 }
 
-func (s *Auth0Server) Run() error {
-	err := s.server.ListenAndServe()
-	if err != nil {
-		s.logger.Error(err)
-	}
-
-	return err
-}
-
-func (s *Auth0Server) Stop(ctx context.Context) error {
+func (s *Auth0Server) Terminate(ctx context.Context) error {
 	err := s.server.Shutdown(ctx)
 	if err != nil {
 		s.logger.Error(err)

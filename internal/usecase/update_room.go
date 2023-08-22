@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -23,24 +23,24 @@ type UpdateRoomUseCaseInterface interface {
 }
 
 type UpdateRoomUseCase struct {
-	roomGateway gateway.RoomGatewayInterface
-	logger      *log.Logger
+	roomRepository repository.RoomRepositoryInterface
+	logger         *log.Logger
 }
 
-func NewUpdateRoomUseCase(roomGateway gateway.RoomGatewayInterface) *UpdateRoomUseCase {
+func NewUpdateRoomUseCase(roomRepository repository.RoomRepositoryInterface) *UpdateRoomUseCase {
 	return &UpdateRoomUseCase{
-		roomGateway: roomGateway,
-		logger:      log.NewLogger("UpdateRoomUseCase"),
+		roomRepository: roomRepository,
+		logger:         log.NewLogger("UpdateRoomUseCase"),
 	}
 }
 
 func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *UpdateRoomUseCaseInput) error {
-	id, err := valueobject.NewIDWith(input.Id)
+	id, err := valueobject.NewIdWith(input.Id)
 	if err != nil {
 		return err
 	}
 
-	adminId, err := valueobject.NewAuth0IDWith(input.AdminId)
+	adminId, err := valueobject.NewUserIdWith(input.AdminId)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *UpdateRoomUseCas
 		return err
 	}
 
-	room, err := u.roomGateway.FindById(ctx, id)
+	room, err := u.roomRepository.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return validation.ErrNotFoundRoom
@@ -69,17 +69,20 @@ func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *UpdateRoomUseCas
 		return validation.ErrInvalidRoomAdmin
 	}
 
-	if err := room.UpdateName(name); err != nil {
+	err = room.UpdateName(name)
+	if err != nil {
 		u.logger.Error(err)
 		return validation.NewInternalError(err)
 	}
 
-	if err := room.UpdateCategory(category); err != nil {
+	err = room.UpdateCategory(category)
+	if err != nil {
 		u.logger.Error(err)
 		return validation.NewInternalError(err)
 	}
 
-	if err := u.roomGateway.Update(ctx, room); err != nil {
+	err = u.roomRepository.Update(ctx, room)
+	if err != nil {
 		u.logger.Error(err)
 		return validation.NewInternalError(err)
 	}

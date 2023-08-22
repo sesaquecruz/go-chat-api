@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestCreateRoomUseCase_ShouldCreateANewRoomWhenInputIsValid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldCreateARoomWhenInputIsValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -25,13 +25,12 @@ func TestCreateRoomUseCase_ShouldCreateANewRoomWhenInputIsValid(t *testing.T) {
 	}
 	expectedOutput := &CreateRoomUseCaseOutput{}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.
 		EXPECT().
 		Save(gomock.Any(), gomock.Any()).
 		Do(func(c context.Context, r *entity.Room) {
 			assert.Equal(t, ctx, c)
-			assert.Nil(t, r.Validate())
 			assert.Equal(t, input.AdminId, r.AdminId().Value())
 			assert.Equal(t, input.Name, r.Name().Value())
 			assert.Equal(t, input.Category, r.Category().Value())
@@ -40,7 +39,7 @@ func TestCreateRoomUseCase_ShouldCreateANewRoomWhenInputIsValid(t *testing.T) {
 		Return(nil).
 		Times(1)
 
-	useCase := NewCreateRoomUseCase(gateway)
+	useCase := NewCreateRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, output)
 	assert.Nil(t, err)
@@ -58,15 +57,15 @@ func TestCreateRoomUseCase_ShouldReturnAnIdErrorWhenAdminIdIsInvalid(t *testing.
 		Category: "Game",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	useCase := NewCreateRoomUseCase(gateway)
+	useCase := NewCreateRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
-	assert.ErrorIs(t, err, validation.ErrRequiredId)
+	assert.ErrorIs(t, err, validation.ErrRequiredUserId)
 }
 
-func TestCreateRoomUseCase_ShouldReturnANameErrorWhenNameIsInvalid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnAnNameErrorWhenNameIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -77,15 +76,15 @@ func TestCreateRoomUseCase_ShouldReturnANameErrorWhenNameIsInvalid(t *testing.T)
 		Category: "Game",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	useCase := NewCreateRoomUseCase(gateway)
+	useCase := NewCreateRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
 }
 
-func TestCreateRoomUseCase_ShouldReturnACategoryErrorWhenCategoryIsInvalid(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnAnCategoryErrorWhenCategoryIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -96,15 +95,15 @@ func TestCreateRoomUseCase_ShouldReturnACategoryErrorWhenCategoryIsInvalid(t *te
 		Category: "",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	useCase := NewCreateRoomUseCase(gateway)
+	useCase := NewCreateRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.ErrorIs(t, err, validation.ErrRequiredRoomCategory)
 }
 
-func TestCreateRoomUseCase_ShouldReturnAnInternalErrorWhenOccursAGatewayError(t *testing.T) {
+func TestCreateRoomUseCase_ShouldReturnAnInternalErrorOnRepositoryError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -115,17 +114,17 @@ func TestCreateRoomUseCase_ShouldReturnAnInternalErrorWhenOccursAGatewayError(t 
 		Category: "Game",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.
 		EXPECT().
 		Save(gomock.Any(), gomock.Any()).
-		Return(validation.NewInternalError(errors.New("a gateway error"))).
+		Return(validation.NewInternalError(errors.New("a repository error"))).
 		Times(1)
 
-	useCase := NewCreateRoomUseCase(gateway)
+	useCase := NewCreateRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
 	assert.IsType(t, &validation.InternalError{}, err)
-	assert.EqualError(t, err, "a gateway error")
+	assert.EqualError(t, err, "a repository error")
 }

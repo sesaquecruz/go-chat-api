@@ -8,14 +8,14 @@ import (
 	"testing"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/search"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository/pagination"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/test/mock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
-func TestSearchRoomUseCase_ShouldReturnARoomPage(t *testing.T) {
+func TestSearchRoomUseCase_ShouldReturnAPageOfOutput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -27,10 +27,10 @@ func TestSearchRoomUseCase_ShouldReturnARoomPage(t *testing.T) {
 		Search: "car",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.EXPECT().
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.EXPECT().
 		Search(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, q *search.Query) {
+		Do(func(c context.Context, q *pagination.Query) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, input.Page, strconv.Itoa(q.Page()))
 			assert.Equal(t, input.Size, strconv.Itoa(q.Size()))
@@ -38,28 +38,28 @@ func TestSearchRoomUseCase_ShouldReturnARoomPage(t *testing.T) {
 			assert.Equal(t, strings.ToUpper(input.Search), q.Search())
 		}).
 		Return(
-			search.NewPage[*entity.Room](0, 2, int64(10), []*entity.Room{nil, nil}),
+			pagination.NewPage[*entity.Room](0, 2, int64(10), []*entity.Room{}),
 			nil,
 		).
 		Times(1)
 
-	useCase := NewSearchRoomUseCase(gateway)
+	useCase := NewSearchRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, output)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, output.Page)
 	assert.Equal(t, 2, output.Size)
 	assert.Equal(t, int64(10), output.Total)
-	assert.Equal(t, 2, len(output.Items))
+	assert.Equal(t, 0, len(output.Items))
 }
 
-func TestSearchRoomUseCase_ShouldAnErrorWhenInputIsInvalid(t *testing.T) {
+func TestSearchRoomUseCase_ShouldReturnAnErrorWhenInputIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	useCase := NewSearchRoomUseCase(gateway)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	useCase := NewSearchRoomUseCase(repository)
 
 	testCases := []struct {
 		input *SearchRoomUseCaseInput
@@ -102,7 +102,7 @@ func TestSearchRoomUseCase_ShouldAnErrorWhenInputIsInvalid(t *testing.T) {
 	}
 }
 
-func TestSearchRoomUseCase_ShouldAnInternalErrorWhenOccursAGatewayError(t *testing.T) {
+func TestSearchRoomUseCase_ShouldReturnAnInternalErrorOnARepositoryError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -114,15 +114,15 @@ func TestSearchRoomUseCase_ShouldAnInternalErrorWhenOccursAGatewayError(t *testi
 		Search: "car",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.EXPECT().
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.EXPECT().
 		Search(gomock.Any(), gomock.Any()).
-		Return(nil, errors.New("a gateway error")).
+		Return(nil, errors.New("a repository error")).
 		Times(1)
 
-	useCase := NewSearchRoomUseCase(gateway)
+	useCase := NewSearchRoomUseCase(repository)
 	output, err := useCase.Execute(ctx, &input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
-	assert.EqualError(t, err, "a gateway error")
+	assert.EqualError(t, err, "a repository error")
 }

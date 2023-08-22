@@ -14,16 +14,16 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldUpdateARoomWhenRoomInputIsValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+	id := valueobject.NewId()
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	createdAt := valueobject.NewTimestamp()
-	updatedAt, _ := valueobject.NewTimestampWith(createdAt.Value())
+	updatedAt, _ := valueobject.NewTimestampWith(createdAt.String())
 
 	room, _ := entity.NewRoomWith(
 		id,
@@ -42,18 +42,18 @@ func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
 		Category: "Tech",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, i *valueobject.ID) {
+		Do(func(c context.Context, i *valueobject.Id) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, id.Value(), i.Value())
 		}).
 		Return(room, nil).
 		Times(1)
 
-	gateway.
+	repository.
 		EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		Do(func(c context.Context, r *entity.Room) {
@@ -62,52 +62,52 @@ func TestUpdateRoomUseCase_ShouldUpdateRoomWhenRoomInputIsValid(t *testing.T) {
 			assert.Equal(t, adminId.Value(), r.AdminId().Value())
 			assert.Equal(t, input.Name, r.Name().Value())
 			assert.Equal(t, input.Category, r.Category().Value())
-			assert.True(t, createdAt.Time().Equal(r.CreatedAt().Time()))
-			assert.True(t, updatedAt.Time().Before(r.UpdatedAt().Time()))
+			assert.True(t, createdAt.Value().Equal(r.CreatedAt().Value()))
+			assert.True(t, updatedAt.Value().Before(r.UpdatedAt().Value()))
 		}).
 		Return(nil).
 		Times(1)
 
-	useCase := NewUpdateRoomUseCase(gateway)
+	useCase := NewUpdateRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.Nil(t, err)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnANotFoundErrorWhenRoomIdDoesNotExist(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnANotFoundErrorWhenIdDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	ctx := context.Background()
 	input := UpdateRoomUseCaseInput{
-		Id:       valueobject.NewID().Value(),
+		Id:       valueobject.NewId().Value(),
 		AdminId:  "auth0|64c8457bb160e37c8c34533b",
 		Name:     "Rust",
 		Category: "Tech",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
 		Return(nil, sql.ErrNoRows).
 		Times(1)
 
-	useCase := NewUpdateRoomUseCase(gateway)
+	useCase := NewUpdateRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, validation.ErrNotFoundRoom)
 }
 
-func TestUpdateRoomUseCase_ShouldReturnAnAdminErrorWhenAdminIdIsNotRoomAdmin(t *testing.T) {
+func TestUpdateRoomUseCase_ShouldReturnAnAdminErrorWhenAdminIdIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	id := valueobject.NewID()
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+	id := valueobject.NewId()
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	createdAt := valueobject.NewTimestamp()
-	updatedAt, _ := valueobject.NewTimestampWith(createdAt.Value())
+	updatedAt, _ := valueobject.NewTimestampWith(createdAt.String())
 
 	room, _ := entity.NewRoomWith(
 		id,
@@ -126,18 +126,18 @@ func TestUpdateRoomUseCase_ShouldReturnAnAdminErrorWhenAdminIdIsNotRoomAdmin(t *
 		Category: "Tech",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	gateway.
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, i *valueobject.ID) {
+		Do(func(c context.Context, i *valueobject.Id) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, id.Value(), i.Value())
 		}).
 		Return(room, nil).
 		Times(1)
 
-	useCase := NewUpdateRoomUseCase(gateway)
+	useCase := NewUpdateRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, validation.ErrInvalidRoomAdmin)
@@ -148,50 +148,50 @@ func TestUpdateRoomUseCase_ShouldReturnAnErrorWhenInputIsInvalid(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := []struct {
-		input *UpdateRoomUseCaseInput
 		err   error
+		input *UpdateRoomUseCaseInput
 	}{
 		{
+			err: validation.ErrInvalidId,
 			input: &UpdateRoomUseCaseInput{
 				Id:       "fdfagferr",
 				AdminId:  "",
 				Name:     "",
 				Category: "",
 			},
-			err: validation.ErrInvalidId,
 		},
 		{
+			err: validation.ErrInvalidUserId,
 			input: &UpdateRoomUseCaseInput{
-				Id:       valueobject.NewID().Value(),
+				Id:       valueobject.NewId().Value(),
 				AdminId:  "fdadaervc233",
 				Name:     "",
 				Category: "",
 			},
-			err: validation.ErrInvalidId,
 		},
 		{
+			err: validation.ErrRequiredRoomName,
 			input: &UpdateRoomUseCaseInput{
-				Id:       valueobject.NewID().Value(),
+				Id:       valueobject.NewId().Value(),
 				AdminId:  "auth0|64c8457bb160e37c8c34533c",
 				Name:     "",
 				Category: "",
 			},
-			err: validation.ErrRequiredRoomName,
 		},
 		{
+			err: validation.ErrInvalidRoomCategory,
 			input: &UpdateRoomUseCaseInput{
-				Id:       valueobject.NewID().Value(),
+				Id:       valueobject.NewId().Value(),
 				AdminId:  "auth0|64c8457bb160e37c8c34533c",
 				Name:     "Rust",
 				Category: "Anything",
 			},
-			err: validation.ErrInvalidRoomCategory,
 		},
 	}
 
 	ctx := context.Background()
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	useCase := NewUpdateRoomUseCase(gateway)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	useCase := NewUpdateRoomUseCase(repository)
 
 	for _, test := range testCases {
 		err := useCase.Execute(ctx, test.input)

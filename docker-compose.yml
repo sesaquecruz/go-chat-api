@@ -11,9 +11,9 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD", "pg_isready"]
-      timeout: 5s
-      retries: 12
+      test: pg_isready
+      timeout: 10s
+      retries: 6
 
   migrate:
     container_name: migrate
@@ -25,12 +25,29 @@ services:
       - ./migrations:/migrations:ro
     command: [ "-path", "/migrations", "-database",  "postgres://postgres:postgres@postgres:5432/chat?sslmode=disable", "-verbose", "up" ]
 
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.12.3-management
+    volumes:
+      - "./rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
+      - "./rabbitmq.json:/etc/rabbitmq/definitions.json"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      timeout: 10s
+      retries: 6
+
   app:
     profiles:
       - app
     container_name: app
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     build: .
     environment:
@@ -39,6 +56,10 @@ services:
       - APP_DATABASE_USER=postgres
       - APP_DATABASE_PASSWORD=postgres
       - APP_DATABASE_NAME=chat
+      - APP_BROKER_HOST=rabbitmq
+      - APP_BROKER_PORT=5672
+      - APP_BROKER_USER=guest
+      - APP_BROKER_PASSWORD=guest
       - APP_API_PORT=8080
       - APP_API_PATH=/api/v1
       - APP_API_MODE=release
