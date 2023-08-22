@@ -6,8 +6,8 @@ import (
 )
 
 type Room struct {
-	id        *valueobject.ID
-	adminId   *valueobject.Auth0ID
+	id        *valueobject.Id
+	adminId   *valueobject.UserId
 	name      *valueobject.RoomName
 	category  *valueobject.RoomCategory
 	createdAt *valueobject.Timestamp
@@ -15,96 +15,57 @@ type Room struct {
 }
 
 func NewRoom(
-	adminId *valueobject.Auth0ID,
+	adminId *valueobject.UserId,
 	name *valueobject.RoomName,
 	category *valueobject.RoomCategory,
 ) (*Room, error) {
 	now := valueobject.NewTimestamp()
-	room := &Room{
-		id:        valueobject.NewID(),
-		adminId:   adminId,
-		name:      name,
-		category:  category,
-		createdAt: now,
-		updatedAt: now,
-	}
 
-	if err := room.Validate(); err != nil {
-		return nil, err
-	}
-
-	return room, nil
+	return NewRoomWith(
+		valueobject.NewId(),
+		adminId,
+		name,
+		category,
+		now,
+		now,
+	)
 }
 
 func NewRoomWith(
-	id *valueobject.ID,
-	adminId *valueobject.Auth0ID,
+	id *valueobject.Id,
+	adminId *valueobject.UserId,
 	name *valueobject.RoomName,
 	category *valueobject.RoomCategory,
 	createdAt *valueobject.Timestamp,
 	updatedAt *valueobject.Timestamp,
 ) (*Room, error) {
-	room := &Room{
+	if id == nil {
+		return nil, validation.ErrRequiredRoomId
+	}
+	if adminId == nil {
+		return nil, validation.ErrRequiredRoomAdminId
+	}
+	if name == nil {
+		return nil, validation.ErrRequiredRoomName
+	}
+	if category == nil {
+		return nil, validation.ErrRequiredRoomCategory
+	}
+	if createdAt == nil {
+		return nil, validation.ErrRequiredRoomCreatedAt
+	}
+	if updatedAt == nil {
+		return nil, validation.ErrRequiredRoomUpdatedAt
+	}
+
+	return &Room{
 		id:        id,
 		adminId:   adminId,
 		name:      name,
 		category:  category,
 		createdAt: createdAt,
 		updatedAt: updatedAt,
-	}
-
-	if err := room.Validate(); err != nil {
-		return nil, err
-	}
-
-	return room, nil
-}
-
-func (r *Room) Validate() error {
-	if r.id == nil {
-		return validation.ErrRequiredRoomId
-	}
-	if r.adminId == nil {
-		return validation.ErrRequiredRoomAdminId
-	}
-	if r.name == nil {
-		return validation.ErrRequiredRoomName
-	}
-	if r.category == nil {
-		return validation.ErrRequiredRoomCategory
-	}
-	if r.createdAt == nil {
-		return validation.ErrRequiredRoomCreatedAt
-	}
-	if r.updatedAt == nil {
-		return validation.ErrRequiredRoomUpdatedAt
-	}
-
-	return nil
-}
-
-func (r *Room) Id() *valueobject.ID {
-	return r.id
-}
-
-func (r *Room) AdminId() *valueobject.Auth0ID {
-	return r.adminId
-}
-
-func (r *Room) Name() *valueobject.RoomName {
-	return r.name
-}
-
-func (r *Room) Category() *valueobject.RoomCategory {
-	return r.category
-}
-
-func (r *Room) CreatedAt() *valueobject.Timestamp {
-	return r.createdAt
-}
-
-func (r *Room) UpdatedAt() *valueobject.Timestamp {
-	return r.updatedAt
+	}, nil
 }
 
 func (r *Room) UpdateName(name *valueobject.RoomName) error {
@@ -125,4 +86,28 @@ func (r *Room) UpdateCategory(category *valueobject.RoomCategory) error {
 	r.category = category
 	r.updatedAt = valueobject.NewTimestamp()
 	return nil
+}
+
+func (r *Room) Id() *valueobject.Id {
+	return r.id
+}
+
+func (r *Room) AdminId() *valueobject.UserId {
+	return r.adminId
+}
+
+func (r *Room) Name() *valueobject.RoomName {
+	return r.name
+}
+
+func (r *Room) Category() *valueobject.RoomCategory {
+	return r.category
+}
+
+func (r *Room) CreatedAt() *valueobject.Timestamp {
+	return r.createdAt
+}
+
+func (r *Room) UpdatedAt() *valueobject.Timestamp {
+	return r.updatedAt
 }

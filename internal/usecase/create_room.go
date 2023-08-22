@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -25,19 +25,19 @@ type CreateRoomUseCaseInterface interface {
 }
 
 type CreateRoomUseCase struct {
-	roomGateway gateway.RoomGatewayInterface
-	logger      *log.Logger
+	roomRepository repository.RoomRepositoryInterface
+	logger         *log.Logger
 }
 
-func NewCreateRoomUseCase(roomGateway gateway.RoomGatewayInterface) *CreateRoomUseCase {
+func NewCreateRoomUseCase(roomRepository repository.RoomRepositoryInterface) *CreateRoomUseCase {
 	return &CreateRoomUseCase{
-		roomGateway: roomGateway,
-		logger:      log.NewLogger("CreateRoomUseCase"),
+		roomRepository: roomRepository,
+		logger:         log.NewLogger("CreateRoomUseCase"),
 	}
 }
 
 func (u *CreateRoomUseCase) Execute(ctx context.Context, input *CreateRoomUseCaseInput) (*CreateRoomUseCaseOutput, error) {
-	adminId, err := valueobject.NewAuth0IDWith(input.AdminId)
+	adminId, err := valueobject.NewUserIdWith(input.AdminId)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +58,15 @@ func (u *CreateRoomUseCase) Execute(ctx context.Context, input *CreateRoomUseCas
 		return nil, err
 	}
 
-	if err := u.roomGateway.Save(ctx, room); err != nil {
+	err = u.roomRepository.Save(ctx, room)
+	if err != nil {
 		u.logger.Error(err)
 		return nil, validation.NewInternalError(err)
 	}
 
-	return &CreateRoomUseCaseOutput{
+	output := &CreateRoomUseCaseOutput{
 		RoomId: room.Id().Value(),
-	}, nil
+	}
+
+	return output, nil
 }

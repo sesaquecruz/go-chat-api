@@ -10,3 +10,8 @@ type RoomResponseDto struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
 }
+
+type MessageRequestDto struct {
+	RoomId string `json:"room_id"`
+	Text   string `json:"text"`
+}

@@ -14,11 +14,11 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestDeleteRoom_ShouldDeleteRoomWhenInputIsValid(t *testing.T) {
+func TestDeleteRoom_ShouldDeleteARoomWhenInputIsValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	room, _ := entity.NewRoom(adminId, name, category)
@@ -29,29 +29,29 @@ func TestDeleteRoom_ShouldDeleteRoomWhenInputIsValid(t *testing.T) {
 		AdminId: room.AdminId().Value(),
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	gateway.
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, id *valueobject.ID) {
+		Do(func(c context.Context, id *valueobject.Id) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, room.Id().Value(), id.Value())
 		}).
 		Return(room, nil).
 		Times(1)
 
-	gateway.
+	repository.
 		EXPECT().
 		Delete(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, i *valueobject.ID) {
+		Do(func(c context.Context, i *valueobject.Id) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, room.Id().Value(), i.Value())
 		}).
 		Return(nil).
 		Times(1)
 
-	useCase := NewDeleteRoomUseCase(gateway)
+	useCase := NewDeleteRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.Nil(t, err)
 }
@@ -73,7 +73,7 @@ func TestDeleteRoom_ShouldReturnAnIdErrorWhenInputIsInvalid(t *testing.T) {
 		},
 		{
 			input: &DeleteRoomUseCaseInput{
-				Id:      valueobject.NewID().Value(),
+				Id:      valueobject.NewId().Value(),
 				AdminId: "fdafiuero3c8c34533b",
 			},
 			err: validation.ErrInvalidId,
@@ -81,8 +81,8 @@ func TestDeleteRoom_ShouldReturnAnIdErrorWhenInputIsInvalid(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
-	useCase := NewDeleteRoomUseCase(gateway)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
+	useCase := NewDeleteRoomUseCase(repository)
 
 	for _, test := range testCases {
 		err := useCase.Execute(ctx, test.input)
@@ -91,35 +91,35 @@ func TestDeleteRoom_ShouldReturnAnIdErrorWhenInputIsInvalid(t *testing.T) {
 	}
 }
 
-func TestDeleteRoom_ShouldReturnANotFoundErrorWhenRoomDoesNotExist(t *testing.T) {
+func TestDeleteRoom_ShouldReturnAnNotFoundErrorWhenRoomDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	ctx := context.Background()
 	input := DeleteRoomUseCaseInput{
-		Id:      valueobject.NewID().Value(),
+		Id:      valueobject.NewId().Value(),
 		AdminId: "auth0|64c8457bb160e37c8c34533b",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	gateway.
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
 		Return(nil, sql.ErrNoRows).
 		Times(1)
 
-	useCase := NewDeleteRoomUseCase(gateway)
+	useCase := NewDeleteRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, validation.ErrNotFoundRoom)
 }
 
-func TestDeleteRoom_ShouldReturnAnAuthorizationErrorWhenIsNotRoomAdmin(t *testing.T) {
+func TestDeleteRoom_ShouldReturnAnAuthorizationErrorWhenAdminIdIsInvalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	adminId, _ := valueobject.NewAuth0IDWith("auth0|64c8457bb160e37c8c34533b")
+	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("Need for Speed")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	room, _ := entity.NewRoom(adminId, name, category)
@@ -130,19 +130,19 @@ func TestDeleteRoom_ShouldReturnAnAuthorizationErrorWhenIsNotRoomAdmin(t *testin
 		AdminId: "auth0|64c8457bb160e37c8c34533c",
 	}
 
-	gateway := mock.NewMockRoomGatewayInterface(ctrl)
+	repository := mock.NewMockRoomRepositoryInterface(ctrl)
 
-	gateway.
+	repository.
 		EXPECT().
 		FindById(gomock.Any(), gomock.Any()).
-		Do(func(c context.Context, id *valueobject.ID) {
+		Do(func(c context.Context, id *valueobject.Id) {
 			assert.Equal(t, ctx, c)
 			assert.Equal(t, room.Id().Value(), id.Value())
 		}).
 		Return(room, nil).
 		Times(1)
 
-	useCase := NewDeleteRoomUseCase(gateway)
+	useCase := NewDeleteRoomUseCase(repository)
 	err := useCase.Execute(ctx, &input)
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, validation.ErrInvalidRoomAdmin)

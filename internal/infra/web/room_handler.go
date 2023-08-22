@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/search"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository/pagination"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -56,13 +55,15 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
+	userId := jwtClaims.Subject
+
 	var requestBody RoomRequestDto
 	if err := c.BindJSON(&requestBody); err != nil {
 		return
 	}
 
 	input := usecase.CreateRoomUseCaseInput{
-		AdminId:  jwtClaims.Subject,
+		AdminId:  userId,
 		Name:     requestBody.Name,
 		Category: requestBody.Category,
 	}
@@ -79,7 +80,9 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
-	c.Header("Location", fmt.Sprintf("%s/%s", c.Request.URL, output.RoomId))
+	location := fmt.Sprintf("%s/%s", c.Request.URL, output.RoomId)
+
+	c.Header("Location", location)
 	c.Status(http.StatusCreated)
 }
 
@@ -103,21 +106,26 @@ func (h *RoomHandler) SearchRoom(c *gin.Context) {
 		return
 	}
 
-	page := search.MapPage[*entity.Room, RoomResponseDto](output, func(r *entity.Room) RoomResponseDto {
+	mapper := func(r *usecase.SearchRoomUseCaseOutput) RoomResponseDto {
 		return RoomResponseDto{
-			Id:       r.Id().Value(),
-			Name:     r.Name().Value(),
-			Category: r.Category().Value(),
+			Id:       r.Id,
+			Name:     r.Name,
+			Category: r.Category,
 		}
-	})
+	}
 
-	c.JSON(http.StatusOK, *page)
+	res := pagination.MapPage[*usecase.SearchRoomUseCaseOutput, RoomResponseDto](output, mapper)
+
+	c.JSON(http.StatusOK, *res)
 }
 
 func (h *RoomHandler) FindRoom(c *gin.Context) {
-	id := c.Param("id")
+	roomId := c.Param("id")
 
-	input := usecase.FindRoomUseCaseInput{RoomId: id}
+	input := usecase.FindRoomUseCaseInput{
+		RoomId: roomId,
+	}
+
 	output, err := h.findRoomUseCase.Execute(c.Request.Context(), &input)
 	if err != nil {
 		if _, ok := err.(*validation.InternalError); ok {
@@ -140,13 +148,14 @@ func (h *RoomHandler) FindRoom(c *gin.Context) {
 }
 
 func (h *RoomHandler) UpdateRoom(c *gin.Context) {
-	id := c.Param("id")
-
 	jwtClaims, err := middleware.JwtClaims(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	roomId := c.Param("id")
+	userId := jwtClaims.Subject
 
 	var requestBody RoomRequestDto
 	if err := c.BindJSON(&requestBody); err != nil {
@@ -154,13 +163,14 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 	}
 
 	input := usecase.UpdateRoomUseCaseInput{
-		Id:       id,
-		AdminId:  jwtClaims.Subject,
+		Id:       roomId,
+		AdminId:  userId,
 		Name:     requestBody.Name,
 		Category: requestBody.Category,
 	}
 
-	if err = h.updateRoomUseCase.Execute(c.Request.Context(), &input); err != nil {
+	err = h.updateRoomUseCase.Execute(c.Request.Context(), &input)
+	if err != nil {
 		if _, ok := err.(*validation.InternalError); ok {
 			h.logger.Error(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -185,20 +195,22 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 }
 
 func (h *RoomHandler) DeleteRoom(c *gin.Context) {
-	id := c.Param("id")
-
 	jwtClaims, err := middleware.JwtClaims(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
+	roomId := c.Param("id")
+	userId := jwtClaims.Subject
+
 	input := usecase.DeleteRoomUseCaseInput{
-		Id:      id,
-		AdminId: jwtClaims.Subject,
+		Id:      roomId,
+		AdminId: userId,
 	}
 
-	if err = h.deleteRoomUseCase.Execute(c.Request.Context(), &input); err != nil {
+	err = h.deleteRoomUseCase.Execute(c.Request.Context(), &input)
+	if err != nil {
 		if _, ok := err.(*validation.InternalError); ok {
 			h.logger.Error(err)
 			c.AbortWithStatus(http.StatusInternalServerError)

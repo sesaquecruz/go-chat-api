@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
+
 	"github.com/spf13/viper"
 )
 
@@ -13,6 +14,13 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Name     string
+}
+
+type BrokerConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
 }
 
 type APIConfig struct {
@@ -25,8 +33,9 @@ type APIConfig struct {
 }
 
 type Config struct {
-	API      APIConfig
 	Database DatabaseConfig
+	Broker   BrokerConfig
+	API      APIConfig
 }
 
 var env *viper.Viper
@@ -42,6 +51,10 @@ func init() {
 	env.SetDefault("APP_DATABASE_USER", "")
 	env.SetDefault("APP_DATABASE_PASSWORD", "")
 	env.SetDefault("APP_DATABASE_NAME", "")
+	env.SetDefault("APP_BROKER_HOST", "")
+	env.SetDefault("APP_BROKER_PORT", "")
+	env.SetDefault("APP_BROKER_USER", "")
+	env.SetDefault("APP_BROKER_PASSWORD", "")
 	env.SetDefault("APP_API_PORT", "")
 	env.SetDefault("APP_API_PATH", "")
 	env.SetDefault("APP_API_MODE", "")
@@ -79,6 +92,13 @@ func Load() {
 		User:     getString("APP_DATABASE_USER"),
 		Password: getString("APP_DATABASE_PASSWORD"),
 		Name:     getString("APP_DATABASE_NAME"),
+	}
+
+	cfg.Broker = BrokerConfig{
+		Host:     getString("APP_BROKER_HOST"),
+		Port:     getString("APP_BROKER_PORT"),
+		User:     getString("APP_BROKER_USER"),
+		Password: getString("APP_BROKER_PASSWORD"),
 	}
 
 	cfg.API = APIConfig{

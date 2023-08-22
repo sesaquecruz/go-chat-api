@@ -9,29 +9,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTimestamp_ShouldCreateANewTimestamp(t *testing.T) {
+func TestTimestamp_ShouldCreateATimestamp(t *testing.T) {
 	timestamp := NewTimestamp()
 	assert.NotNil(t, timestamp)
-	timeValue := timestamp.Time()
-	stringValue := timestamp.Value()
+
+	timeValue := timestamp.Value()
+	stringValue := timestamp.String()
 	assert.Equal(t, stringValue, timeValue.Format(timestampLayout))
 }
 
-func TestTimestamp_ShouldCreateANewTimestampWhenValueIsValid(t *testing.T) {
+func TestTimestamp_ShouldCreateATimestampWhenValueIsValid(t *testing.T) {
 	value := time.Now().UTC().Format(timestampLayout)
 	timestamp, err := NewTimestampWith(value)
 	assert.NotNil(t, timestamp)
 	assert.Nil(t, err)
-	timeValue := timestamp.Time()
-	stringValue := timestamp.Value()
+
+	timeValue := timestamp.Value()
+	stringValue := timestamp.String()
 	assert.Equal(t, stringValue, timeValue.Format(timestampLayout))
 }
 
 func TestTimestamp_ShouldCreateEqualsTimestamps(t *testing.T) {
 	timestamp1 := NewTimestamp()
-	timestamp2, _ := NewTimestampWith(timestamp1.Value())
-	assert.Equal(t, timestamp1.Value(), timestamp2.Value())
-	assert.True(t, timestamp1.Time().Equal(timestamp2.Time()))
+	timestamp2, err := NewTimestampWith(timestamp1.String())
+	assert.NotNil(t, timestamp1)
+	assert.Nil(t, err)
+	assert.True(t, timestamp1.Value().Equal(timestamp2.Value()))
+	assert.Equal(t, timestamp1.String(), timestamp2.String())
 }
 
 func TestTimestamp_ShouldReturnARequiredTimestampErrorWhenValueIsEmpty(t *testing.T) {
@@ -42,7 +46,7 @@ func TestTimestamp_ShouldReturnARequiredTimestampErrorWhenValueIsEmpty(t *testin
 	assert.ErrorIs(t, err, validation.ErrRequiredTimestamp)
 }
 
-func TestTimestamp_ShouldReturnAInvalidTimestampErrorWhenValueIsInvalid(t *testing.T) {
+func TestTimestamp_ShouldReturnAnInvalidTimestampErrorWhenValueIsInvalid(t *testing.T) {
 	value := "2006-01-02T15:04:00.999999"
 	timestamp, err := NewTimestampWith(value)
 	assert.Nil(t, timestamp)

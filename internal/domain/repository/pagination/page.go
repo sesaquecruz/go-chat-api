@@ -1,10 +1,10 @@
-package search
+package pagination
 
 type Page[T any] struct {
 	Page  int   `json:"page"`
 	Size  int   `json:"size"`
 	Total int64 `json:"total"`
-	Items []T
+	Items []T   `json:"items"`
 }
 
 func NewPage[T any](page int, size int, total int64, items []T) *Page[T] {

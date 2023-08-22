@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
@@ -21,29 +21,29 @@ type DeleteRoomUseCaseInterface interface {
 }
 
 type DeleteRoomUseCase struct {
-	roomGateway gateway.RoomGatewayInterface
-	logger      *log.Logger
+	roomRepository repository.RoomRepositoryInterface
+	logger         *log.Logger
 }
 
-func NewDeleteRoomUseCase(roomGateway gateway.RoomGatewayInterface) *DeleteRoomUseCase {
+func NewDeleteRoomUseCase(roomRepository repository.RoomRepositoryInterface) *DeleteRoomUseCase {
 	return &DeleteRoomUseCase{
-		roomGateway: roomGateway,
-		logger:      log.NewLogger("DeleteRoomUseCase"),
+		roomRepository: roomRepository,
+		logger:         log.NewLogger("DeleteRoomUseCase"),
 	}
 }
 
 func (u *DeleteRoomUseCase) Execute(ctx context.Context, input *DeleteRoomUseCaseInput) error {
-	id, err := valueobject.NewIDWith(input.Id)
+	id, err := valueobject.NewIdWith(input.Id)
 	if err != nil {
 		return err
 	}
 
-	adminId, err := valueobject.NewAuth0IDWith(input.AdminId)
+	adminId, err := valueobject.NewUserIdWith(input.AdminId)
 	if err != nil {
 		return err
 	}
 
-	room, err := u.roomGateway.FindById(ctx, id)
+	room, err := u.roomRepository.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return validation.ErrNotFoundRoom
@@ -57,7 +57,8 @@ func (u *DeleteRoomUseCase) Execute(ctx context.Context, input *DeleteRoomUseCas
 		return validation.ErrInvalidRoomAdmin
 	}
 
-	if err := u.roomGateway.Delete(ctx, id); err != nil {
+	err = u.roomRepository.Delete(ctx, id)
+	if err != nil {
 		u.logger.Error(err)
 		return validation.NewInternalError(err)
 	}

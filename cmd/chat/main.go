@@ -13,7 +13,8 @@ func main() {
 
 	config.Load()
 	cfg := config.GetConfig()
-	router := di.NewApiRouter(&cfg.Database, &cfg.API)
+
+	router := di.NewApiRouter(&cfg.Database, &cfg.Broker, &cfg.API)
 	addr := fmt.Sprintf(":%s", cfg.API.Port)
 
 	logger.Infof("running on %s\n", addr)

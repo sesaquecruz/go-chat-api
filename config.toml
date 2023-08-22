@@ -5,6 +5,12 @@ user = "postgres"
 password = "postgres"
 name = "chat"
 
+[app.broker]
+host = "localhost"
+port = "5672"
+user = "guest"
+password = "guest"
+
 [app.api]
 port = "8080"
 path = "/api/v1"

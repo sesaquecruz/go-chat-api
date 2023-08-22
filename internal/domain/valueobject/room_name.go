@@ -11,7 +11,7 @@ func NewRoomNameWith(value string) (*RoomName, error) {
 		return nil, validation.ErrRequiredRoomName
 	}
 	if len(value) > 50 {
-		return nil, validation.ErrMaxSizeRoomName
+		return nil, validation.ErrSizeRoomName
 	}
 
 	return &RoomName{value: value}, nil
