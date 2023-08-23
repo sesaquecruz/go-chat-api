@@ -33,7 +33,7 @@ func TestCreateMessageUseCase_ShouldCreateAMessageInputIsValid(t *testing.T) {
 
 	roomRepository := mock.NewMockRoomRepositoryInterface(ctrl)
 	messageRepository := mock.NewMockMessageRepositoryInterface(ctrl)
-	messageGateway := mock.NewMockMessageGatewayInterface(ctrl)
+	messageGateway := mock.NewMockMessageSenderGatewayInterface(ctrl)
 
 	roomRepository.
 		EXPECT().

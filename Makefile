@@ -18,5 +18,6 @@ update_mocks:
 	@echo "Updating mocks";
 	mockgen --source=internal/domain/repository/room_repository.go --destination=test/mock/room_repository.go --package=mock;
 	mockgen --source=internal/domain/repository/message_repository.go --destination=test/mock/message_repository.go --package=mock;
-	mockgen --source=internal/domain/gateway/message_gateway.go --destination=test/mock/message_gateway.go --package=mock;
+	mockgen --source=internal/domain/gateway/message_sender_gateway.go --destination=test/mock/message_sender_gateway.go --package=mock;
+	mockgen --source=internal/domain/gateway/message_receiver_gateway.go --destination=test/mock/message_receiver_gateway.go --package=mock;
 

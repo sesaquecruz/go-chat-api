@@ -8,7 +8,6 @@ import (
 
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 	"github.com/sesaquecruz/go-chat-api/test"
 
@@ -21,7 +20,7 @@ var brokerMessageGateway, _ = test.NewRabbitmqContainer(context.Background(), ".
 type MessageGatewayTestSuite struct {
 	suite.Suite
 	ctx            context.Context
-	messageGateway gateway.MessageGatewayInterface
+	messageGateway *MessageGateway
 }
 
 func (s *MessageGatewayTestSuite) SetupSuite() {

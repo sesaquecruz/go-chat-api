@@ -47,7 +47,9 @@ var setRoomRepositoryInterface = wire.NewSet(database.NewRoomRepository, wire.Bi
 var setMessageRepositoryInterface = wire.NewSet(database.NewMessageRepository, wire.Bind(new(repository.MessageRepositoryInterface), new(*database.MessageRepository)))
 
 // Gateways
-var setMessageGatewayInterface = wire.NewSet(event.NewMessageGateway, wire.Bind(new(gateway.MessageGatewayInterface), new(*event.MessageGateway)))
+var setMessageSenderGatewayInterface = wire.NewSet(event.NewMessageGateway, wire.Bind(new(gateway.MessageSenderGatewayInterface), new(*event.MessageGateway)))
+
+var setMessageReceiverGatewayInterface = wire.NewSet(event.NewMessageGateway, wire.Bind(new(gateway.MessageReceiverGatewayInterface), new(*event.MessageGateway)))
 
 // Use Cases
 var setCreateRoomUseCaseInterface = wire.NewSet(usecase.NewCreateRoomUseCase, wire.Bind(new(usecase.CreateRoomUseCaseInterface), new(*usecase.CreateRoomUseCase)))

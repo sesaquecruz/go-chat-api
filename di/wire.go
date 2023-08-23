@@ -28,9 +28,14 @@ var setMessageRepositoryInterface = wire.NewSet(
 )
 
 // Gateways
-var setMessageGatewayInterface = wire.NewSet(
+var setMessageSenderGatewayInterface = wire.NewSet(
 	event.NewMessageGateway,
-	wire.Bind(new(gateway.MessageGatewayInterface), new(*event.MessageGateway)),
+	wire.Bind(new(gateway.MessageSenderGatewayInterface), new(*event.MessageGateway)),
+)
+
+var setMessageReceiverGatewayInterface = wire.NewSet(
+	event.NewMessageGateway,
+	wire.Bind(new(gateway.MessageReceiverGatewayInterface), new(*event.MessageGateway)),
 )
 
 // Use Cases
@@ -87,7 +92,7 @@ func NewApiRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *c
 		setMessageRepositoryInterface,
 
 		// Gateways
-		setMessageGatewayInterface,
+		setMessageSenderGatewayInterface,
 
 		// Use Cases
 		setCreateRoomUseCaseInterface,

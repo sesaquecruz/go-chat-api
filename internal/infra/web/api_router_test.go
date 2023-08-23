@@ -34,11 +34,12 @@ var authApi = test.NewAuth0Server()
 
 type ApiRouterTestSuite struct {
 	suite.Suite
-	ctx               context.Context
-	roomRepository    repository.RoomRepositoryInterface
-	messageRepository repository.MessageRepositoryInterface
-	messageGateway    gateway.MessageGatewayInterface
-	router            *gin.Engine
+	ctx                    context.Context
+	roomRepository         repository.RoomRepositoryInterface
+	messageRepository      repository.MessageRepositoryInterface
+	messageSenderGateway   gateway.MessageSenderGatewayInterface
+	messageRecevierGateway gateway.MessageReceiverGatewayInterface
+	router                 *gin.Engine
 }
 
 func (s *ApiRouterTestSuite) SetupTest() {
@@ -62,14 +63,15 @@ func (s *ApiRouterTestSuite) SetupTest() {
 	roomRepository := database.NewRoomRepository(db)
 	messageRepository := database.NewMessageRepository(db)
 
-	messageGateway := event.NewMessageGateway(conn)
+	messageSenderGateway := event.NewMessageGateway(conn)
+	messageReceiverGateway := event.NewMessageGateway(conn)
 
 	createRoomUseCase := usecase.NewCreateRoomUseCase(roomRepository)
 	findRoomUseCase := usecase.NewFindRoomUseCase(roomRepository)
 	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomRepository)
 	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomRepository)
 	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomRepository)
-	createMessageUseCase := usecase.NewCreateMessageUseCase(roomRepository, messageRepository, messageGateway)
+	createMessageUseCase := usecase.NewCreateMessageUseCase(roomRepository, messageRepository, messageSenderGateway)
 
 	roomHandler := NewRoomHandler(
 		createRoomUseCase,
@@ -98,7 +100,8 @@ func (s *ApiRouterTestSuite) SetupTest() {
 	s.ctx = context.Background()
 	s.roomRepository = roomRepository
 	s.messageRepository = messageRepository
-	s.messageGateway = messageGateway
+	s.messageSenderGateway = messageSenderGateway
+	s.messageRecevierGateway = messageReceiverGateway
 	s.router = apiRouter
 }
 
@@ -674,7 +677,7 @@ func (s *ApiRouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
 	assert.Equal(t, user, message.SenderName().Value())
 	assert.Equal(t, payload.Text, message.Text().Value())
 
-	msgs, err := s.messageGateway.Receive()
+	msgs, err := s.messageRecevierGateway.Receive()
 	assert.Nil(t, err)
 
 	var data event.MessageEvent

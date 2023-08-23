@@ -29,22 +29,22 @@ type CreateMessageUseCaseInterface interface {
 }
 
 type CreateMessageUseCase struct {
-	roomRepository    repository.RoomRepositoryInterface
-	messageRepository repository.MessageRepositoryInterface
-	messageGateway    gateway.MessageGatewayInterface
-	logger            *log.Logger
+	roomRepository       repository.RoomRepositoryInterface
+	messageRepository    repository.MessageRepositoryInterface
+	messageSenderGateway gateway.MessageSenderGatewayInterface
+	logger               *log.Logger
 }
 
 func NewCreateMessageUseCase(
 	roomRepository repository.RoomRepositoryInterface,
 	messageRepository repository.MessageRepositoryInterface,
-	messageGateway gateway.MessageGatewayInterface,
+	messageSenderGateway gateway.MessageSenderGatewayInterface,
 ) *CreateMessageUseCase {
 	return &CreateMessageUseCase{
-		roomRepository:    roomRepository,
-		messageRepository: messageRepository,
-		messageGateway:    messageGateway,
-		logger:            log.NewLogger("CreateMessageUseCase"),
+		roomRepository:       roomRepository,
+		messageRepository:    messageRepository,
+		messageSenderGateway: messageSenderGateway,
+		logger:               log.NewLogger("CreateMessageUseCase"),
 	}
 }
 
@@ -90,7 +90,7 @@ func (u *CreateMessageUseCase) Execute(ctx context.Context, input *CreateMessage
 		return nil, validation.NewInternalError(err)
 	}
 
-	err = u.messageGateway.Send(ctx, message)
+	err = u.messageSenderGateway.Send(ctx, message)
 	if err != nil {
 		u.logger.Error(err)
 		return nil, validation.NewInternalError(err)
