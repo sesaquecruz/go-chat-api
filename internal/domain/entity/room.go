@@ -5,6 +5,8 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 )
 
+const ErrInvalidRoomAdmin = validation.UnauthorizedError("room admin is invalid")
+
 type Room struct {
 	id        *valueobject.Id
 	adminId   *valueobject.UserId
@@ -18,9 +20,8 @@ func NewRoom(
 	adminId *valueobject.UserId,
 	name *valueobject.RoomName,
 	category *valueobject.RoomCategory,
-) (*Room, error) {
+) *Room {
 	now := valueobject.NewTimestamp()
-
 	return NewRoomWith(
 		valueobject.NewId(),
 		adminId,
@@ -38,26 +39,7 @@ func NewRoomWith(
 	category *valueobject.RoomCategory,
 	createdAt *valueobject.Timestamp,
 	updatedAt *valueobject.Timestamp,
-) (*Room, error) {
-	if id == nil {
-		return nil, validation.ErrRequiredRoomId
-	}
-	if adminId == nil {
-		return nil, validation.ErrRequiredRoomAdminId
-	}
-	if name == nil {
-		return nil, validation.ErrRequiredRoomName
-	}
-	if category == nil {
-		return nil, validation.ErrRequiredRoomCategory
-	}
-	if createdAt == nil {
-		return nil, validation.ErrRequiredRoomCreatedAt
-	}
-	if updatedAt == nil {
-		return nil, validation.ErrRequiredRoomUpdatedAt
-	}
-
+) *Room {
 	return &Room{
 		id:        id,
 		adminId:   adminId,
@@ -65,27 +47,7 @@ func NewRoomWith(
 		category:  category,
 		createdAt: createdAt,
 		updatedAt: updatedAt,
-	}, nil
-}
-
-func (r *Room) UpdateName(name *valueobject.RoomName) error {
-	if name == nil {
-		return validation.ErrRequiredRoomName
 	}
-
-	r.name = name
-	r.updatedAt = valueobject.NewTimestamp()
-	return nil
-}
-
-func (r *Room) UpdateCategory(category *valueobject.RoomCategory) error {
-	if category == nil {
-		return validation.ErrRequiredRoomCategory
-	}
-
-	r.category = category
-	r.updatedAt = valueobject.NewTimestamp()
-	return nil
 }
 
 func (r *Room) Id() *valueobject.Id {
@@ -110,4 +72,22 @@ func (r *Room) CreatedAt() *valueobject.Timestamp {
 
 func (r *Room) UpdatedAt() *valueobject.Timestamp {
 	return r.updatedAt
+}
+
+func (r *Room) UpdateName(name *valueobject.RoomName) {
+	r.name = name
+	r.updatedAt = valueobject.NewTimestamp()
+}
+
+func (r *Room) UpdateCategory(category *valueobject.RoomCategory) {
+	r.category = category
+	r.updatedAt = valueobject.NewTimestamp()
+}
+
+func (r *Room) ValidateAdmin(adminId *valueobject.UserId) error {
+	if r.adminId.Value() != adminId.Value() {
+		return ErrInvalidRoomAdmin
+	}
+
+	return nil
 }

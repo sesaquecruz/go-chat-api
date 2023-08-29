@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 )
 
@@ -19,7 +18,7 @@ func NewMessage(
 	senderId *valueobject.UserId,
 	senderName *valueobject.UserName,
 	text *valueobject.MessageText,
-) (*Message, error) {
+) *Message {
 	return NewMessageWith(
 		valueobject.NewId(),
 		roomId,
@@ -37,26 +36,7 @@ func NewMessageWith(
 	senderName *valueobject.UserName,
 	text *valueobject.MessageText,
 	createdAt *valueobject.Timestamp,
-) (*Message, error) {
-	if id == nil {
-		return nil, validation.ErrRequiredMessageId
-	}
-	if roomId == nil {
-		return nil, validation.ErrRequiredMessageRoomId
-	}
-	if senderId == nil {
-		return nil, validation.ErrRequiredMessageSenderId
-	}
-	if senderName == nil {
-		return nil, validation.ErrRequiredMessageSenderName
-	}
-	if text == nil {
-		return nil, validation.ErrRequiredMessageText
-	}
-	if createdAt == nil {
-		return nil, validation.ErrRequiredMessageCreatedAt
-	}
-
+) *Message {
 	return &Message{
 		id:         id,
 		roomId:     roomId,
@@ -64,7 +44,7 @@ func NewMessageWith(
 		senderName: senderName,
 		text:       text,
 		createdAt:  createdAt,
-	}, nil
+	}
 }
 
 func (m *Message) Id() *valueobject.Id {

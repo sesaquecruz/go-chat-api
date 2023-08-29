@@ -5,6 +5,10 @@ user = "postgres"
 password = "postgres"
 name = "chat"
 
+[app.cache]
+host = "localhost"
+port = "6379"
+
 [app.broker]
 host = "localhost"
 port = "5672"

@@ -9,14 +9,13 @@ import (
 )
 
 func main() {
-	logger := log.NewLogger("main")
+	logger := log.NewLogger("Main")
 
-	config.Load()
-	cfg := config.GetConfig()
+	cfg := config.Load()
 
-	router := di.NewApiRouter(&cfg.Database, &cfg.Broker, &cfg.API)
-	addr := fmt.Sprintf(":%s", cfg.API.Port)
+	router := di.NewRouter(&cfg.Database, &cfg.Broker, &cfg.Api)
+	addr := fmt.Sprintf(":%s", cfg.Api.Port)
 
 	logger.Infof("running on %s\n", addr)
-	logger.Fatal((router.Run(addr)))
+	router.Run(addr)
 }

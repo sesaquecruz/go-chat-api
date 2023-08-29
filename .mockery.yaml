@@ -1,0 +1,13 @@
+disable-version-string: True
+with-expecter: True
+dir: "test/mocks/"
+outpkg: "mocks"
+filename: "{{.InterfaceName}}Mock.go"
+mockname: "{{.InterfaceName}}Mock"
+packages:
+  github.com/sesaquecruz/go-chat-api/internal/domain/gateway:
+    config:
+      all: True
+  github.com/sesaquecruz/go-chat-api/internal/domain/repository:
+    config:
+      all: True

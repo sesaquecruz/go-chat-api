@@ -8,6 +8,11 @@ import (
 
 const timestampLayout = "2006-01-02T15:04:05.999999Z"
 
+const (
+	ErrRequiredTimestamp = validation.ValidationError("timestamp is required")
+	ErrInvalidTimestamp  = validation.ValidationError("timestamp is invalid")
+)
+
 type Timestamp struct {
 	value time.Time
 }
@@ -19,12 +24,12 @@ func NewTimestamp() *Timestamp {
 
 func NewTimestampWith(value string) (*Timestamp, error) {
 	if value == "" {
-		return nil, validation.ErrRequiredTimestamp
+		return nil, ErrRequiredTimestamp
 	}
 
 	t, err := time.Parse(timestampLayout, value)
 	if err != nil {
-		return nil, validation.ErrInvalidTimestamp
+		return nil, ErrInvalidTimestamp
 	}
 
 	t = t.UTC()
@@ -32,10 +37,10 @@ func NewTimestampWith(value string) (*Timestamp, error) {
 	return &Timestamp{value: t}, nil
 }
 
-func (t *Timestamp) Value() time.Time {
-	return t.value
+func (t *Timestamp) Value() string {
+	return t.value.Format(timestampLayout)
 }
 
-func (t *Timestamp) String() string {
-	return t.value.Format(timestampLayout)
+func (t *Timestamp) Time() time.Time {
+	return t.value
 }
