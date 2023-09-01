@@ -6,4 +6,5 @@ import (
 
 type MessageHandler interface {
 	CreateMessage(c *gin.Context)
+	ReceiveMessage(c *gin.Context)
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )

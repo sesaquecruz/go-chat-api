@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
+
+	"github.com/google/uuid"
 	"gopkg.in/go-jose/go-jose.v2"
 	"gopkg.in/go-jose/go-jose.v2/jwt"
 )

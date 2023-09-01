@@ -13,9 +13,9 @@ func main() {
 
 	cfg := config.Load()
 
-	router := di.NewRouter(&cfg.Database, &cfg.Broker, &cfg.Api)
+	router := di.NewRouter(&cfg.Database, &cfg.Cache, &cfg.Broker, &cfg.Api)
 	addr := fmt.Sprintf(":%s", cfg.Api.Port)
 
-	logger.Infof("running on %s\n", addr)
+	logger.Infof("server started on %s\n", addr)
 	router.Run(addr)
 }

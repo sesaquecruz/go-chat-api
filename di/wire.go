@@ -5,8 +5,10 @@ package di
 
 import (
 	"github.com/sesaquecruz/go-chat-api/config"
+	"github.com/sesaquecruz/go-chat-api/internal/chat"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/cache"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
@@ -29,6 +31,12 @@ var setRoomRepository = wire.NewSet(
 var setMessageRepository = wire.NewSet(
 	database.NewMessagePostgresRepository,
 	wire.Bind(new(repository.MessageRepository), new(*database.MessagePostgresRepository)),
+)
+
+// Cache
+var setQueue = wire.NewSet(
+	cache.NewRedisQueue,
+	wire.Bind(new(cache.Queue), new(*cache.RedisQueue)),
 )
 
 // Gateways
@@ -68,6 +76,12 @@ var setCreateMessageUseCase = wire.NewSet(
 	wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)),
 )
 
+// Chat
+var setChat = wire.NewSet(
+	chat.NewChatCached,
+	wire.Bind(new(chat.Chat), new(*chat.ChatCached)),
+)
+
 // Handlers
 var setRoomHandler = wire.NewSet(
 	room.NewRoomHandler,
@@ -80,15 +94,24 @@ var setMessageHandler = wire.NewSet(
 )
 
 // Factories
-func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *config.ApiConfig) *gin.Engine {
+func NewRouter(
+	db *config.DatabaseConfig,
+	cfg *config.CacheConfig,
+	broker *config.BrokerConfig,
+	api *config.ApiConfig,
+) *gin.Engine {
 	wire.Build(
 		// Connections
 		database.PostgresConnection,
+		cache.RedisConnection,
 		event.RabbitMqConnection,
 
 		// Repositories
 		setRoomRepository,
 		setMessageRepository,
+
+		// Cache
+		setQueue,
 
 		// Gateways
 		setMessageEventGateway,
@@ -100,6 +123,9 @@ func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *conf
 		setUpdateRoomUseCase,
 		setDeleteRoomUseCase,
 		setCreateMessageUseCase,
+
+		// Chat
+		setChat,
 
 		// Handlers
 		setRoomHandler,

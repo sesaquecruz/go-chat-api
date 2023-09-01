@@ -1,7 +1,6 @@
 package message
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
@@ -27,13 +26,13 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	}
 
 	input := &usecase.CreateMessageUseCaseInput{
-		RoomId:     requestBody.RoomId,
+		RoomId:     c.Param("id"),
 		SenderId:   jwtClaims.Subject,
 		SenderName: jwtClaims.Nickname,
 		Text:       requestBody.Text,
 	}
 
-	output, err := h.createMessageUseCase.Execute(c.Request.Context(), input)
+	_, err = h.createMessageUseCase.Execute(c.Request.Context(), input)
 	if err != nil {
 		if _, ok := err.(validation.ValidationError); ok {
 			c.AbortWithStatusJSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
@@ -49,8 +48,5 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
 
-	location := fmt.Sprintf("%s/%s", c.Request.URL, output.MessageId)
-
-	c.Header("Location", location)
 	c.Status(http.StatusCreated)
 }

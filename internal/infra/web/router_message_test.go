@@ -3,12 +3,12 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"time"
 
 	"github.com/sesaquecruz/go-chat-api/internal/domain/event"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,25 +18,24 @@ func (s *RouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
 	t := s.T()
 	r := s.router
 
-	user := auth.GetNickname()
-	sub := auth.GenerateSub()
-	jwt, _ := auth.GenerateJWT(sub)
+	userName := auth.GetNickname()
+	userId := auth.GenerateSub()
+	jwt, _ := auth.GenerateJWT(userId)
 
-	room := createARoom(sub, "A Game", "Game")
+	room := createARoom(userId, "A Game", "Game")
 	s.roomRepository.Save(s.ctx, room)
 
 	payload := struct {
-		RoomId string `json:"room_id"`
-		Text   string `json:"text"`
+		Text string `json:"text"`
 	}{
-		room.Id().Value(),
 		"A text",
 	}
 
+	url := fmt.Sprintf("/api/v1/rooms/%s/send", room.Id().Value())
 	body, _ := json.Marshal(payload)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewReader(body))
+	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+jwt)
 
 	r.ServeHTTP(w, req)
@@ -44,25 +43,11 @@ func (s *RouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
 
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 
-	location := res.Header.Get("Location")
-	assert.NotEmpty(t, location)
-
-	id, err := valueobject.NewIdWith(location[len("/api/v1/messages/"):])
-	assert.Nil(t, err)
-
-	message, err := s.messageRepository.FindById(s.ctx, id)
-	assert.NotNil(t, message)
-	assert.Nil(t, err)
-	assert.Equal(t, payload.RoomId, message.RoomId().Value())
-	assert.Equal(t, sub, message.SenderId().Value())
-	assert.Equal(t, user, message.SenderName().Value())
-	assert.Equal(t, payload.Text, message.Text().Value())
-
 	msgs := make(chan *event.MessageEvent)
 	defer close(msgs)
 
 	go func() {
-		err = s.messageEventGateway.Receive(s.ctx, msgs)
+		err := s.messageEventGateway.Receive(s.ctx, msgs)
 		if err != nil {
 			t.Error(err)
 		}
@@ -70,12 +55,10 @@ func (s *RouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
 
 	select {
 	case msg := <-msgs:
-		assert.Equal(t, message.Id().Value(), msg.Id)
-		assert.Equal(t, message.RoomId().Value(), msg.RoomId)
-		assert.Equal(t, message.SenderId().Value(), msg.SenderId)
-		assert.Equal(t, message.SenderName().Value(), msg.SenderName)
-		assert.Equal(t, message.Text().Value(), msg.Text)
-		assert.Equal(t, message.CreatedAt().Value(), msg.CreatedAt)
+		assert.Equal(t, room.Id().Value(), msg.RoomId)
+		assert.Equal(t, userId, msg.SenderId)
+		assert.Equal(t, userName, msg.SenderName)
+		assert.Equal(t, payload.Text, msg.Text)
 	case <-time.After(10 * time.Second):
 		t.Fail()
 	}
