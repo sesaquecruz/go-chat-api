@@ -16,20 +16,33 @@ func TestUserName_ShouldCreateAnUserNameWhenValueIsValid(t *testing.T) {
 	assert.Equal(t, value, name.Value())
 }
 
-func TestUserName_ShouldReturnARequiredUserNameErrorWhenValueIsEmpty(t *testing.T) {
-	value := ""
-	name, err := NewUserNameWith(value)
-	assert.Nil(t, name)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredUserName)
-}
+func TestUserName_ShouldReturnAValidationErrorWhenValueIsInvalid(t *testing.T) {
+	testCases := []struct {
+		test  string
+		value string
+		err   error
+	}{
+		{
+			"empty value",
+			"",
+			ErrRequiredUserName,
+		},
+		{
+			"invalid value size",
+			"dfaiuerewnvdiuoriewruuiwqeuqwe89123jladjsdasadiou23",
+			ErrInvalidUserName,
+		},
+	}
 
-func TestUserName_ShouldReturnASizeUserNameErrorWhenValueHasMoreThan50Characters(t *testing.T) {
-	value := "dfaiuerewnvdiuoriewruuiwqeuqwe89123jladjsdasadiou23"
-	assert.Equal(t, len(value), 51)
+	assert.Equal(t, len(testCases[1].value), 51)
 
-	name, err := NewUserNameWith(value)
-	assert.Nil(t, name)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrSizeUserName)
+	for _, tc := range testCases {
+		t.Run(tc.test, func(t *testing.T) {
+			userName, err := NewUserNameWith(tc.value)
+			assert.Nil(t, userName)
+			assert.NotNil(t, err)
+			assert.ErrorIs(t, err, tc.err)
+			assert.IsType(t, validation.ValidationError(""), err)
+		})
+	}
 }

@@ -1,8 +1,14 @@
 package valueobject
 
 import (
-	"github.com/google/uuid"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/validation"
+
+	"github.com/google/uuid"
+)
+
+const (
+	ErrRequiredId = validation.ValidationError("id is required")
+	ErrInvalidId  = validation.ValidationError("id is invalid")
 )
 
 type Id struct {
@@ -16,12 +22,12 @@ func NewId() *Id {
 
 func NewIdWith(value string) (*Id, error) {
 	if value == "" {
-		return nil, validation.ErrRequiredId
+		return nil, ErrRequiredId
 	}
 
 	id, err := uuid.Parse(value)
 	if err != nil || id == uuid.Nil {
-		return nil, validation.ErrInvalidId
+		return nil, ErrInvalidId
 	}
 
 	return &Id{value: id.String()}, nil

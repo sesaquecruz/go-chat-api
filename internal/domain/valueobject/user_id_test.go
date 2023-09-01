@@ -16,18 +16,31 @@ func TestUserId_ShouldCreateAnUserIdWhenValueIsValid(t *testing.T) {
 	assert.Equal(t, value, id.Value())
 }
 
-func TestUserId_ShouldReturnARequiredUserIdErrorWhenValueIsEmpty(t *testing.T) {
-	value := ""
-	id, err := NewUserIdWith(value)
-	assert.Nil(t, id)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredUserId)
-}
+func TestUserId_ShouldReturnAValidationErrorWhenValueIsInvalid(t *testing.T) {
+	testCases := []struct {
+		test  string
+		value string
+		err   error
+	}{
+		{
+			"empty value",
+			"",
+			ErrRequiredUserId,
+		},
+		{
+			"invalid value",
+			"kj12389013kjfdsf9819023jkhfjds",
+			ErrInvalidUserId,
+		},
+	}
 
-func TestUserId_ShouldReturnAnInvalidUserIdErrorWhenValueIsInvalid(t *testing.T) {
-	value := "kj12389013kjfdsf9819023jkhfjds"
-	id, err := NewUserIdWith(value)
-	assert.Nil(t, id)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrInvalidUserId)
+	for _, tc := range testCases {
+		t.Run(tc.test, func(t *testing.T) {
+			id, err := NewUserIdWith(tc.value)
+			assert.Nil(t, id)
+			assert.NotNil(t, err)
+			assert.ErrorIs(t, err, tc.err)
+			assert.IsType(t, validation.ValidationError(""), err)
+		})
+	}
 }

@@ -5,104 +5,135 @@ package di
 
 import (
 	"github.com/sesaquecruz/go-chat-api/config"
+	"github.com/sesaquecruz/go-chat-api/internal/chat"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/cache"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/message"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
+	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
 // Repositories
-var setRoomRepositoryInterface = wire.NewSet(
-	database.NewRoomRepository,
-	wire.Bind(new(repository.RoomRepositoryInterface), new(*database.RoomRepository)),
+var setRoomRepository = wire.NewSet(
+	database.NewRoomPostgresRepository,
+	wire.Bind(new(repository.RoomRepository), new(*database.RoomPostgresRepository)),
 )
 
-var setMessageRepositoryInterface = wire.NewSet(
-	database.NewMessageRepository,
-	wire.Bind(new(repository.MessageRepositoryInterface), new(*database.MessageRepository)),
+var setMessageRepository = wire.NewSet(
+	database.NewMessagePostgresRepository,
+	wire.Bind(new(repository.MessageRepository), new(*database.MessagePostgresRepository)),
+)
+
+// Cache
+var setQueue = wire.NewSet(
+	cache.NewRedisQueue,
+	wire.Bind(new(cache.Queue), new(*cache.RedisQueue)),
 )
 
 // Gateways
-var setMessageGatewayInterface = wire.NewSet(
-	event.NewMessageGateway,
-	wire.Bind(new(gateway.MessageGatewayInterface), new(*event.MessageGateway)),
+var setMessageEventGateway = wire.NewSet(
+	event.NewMessageEventRabbitMqGateway,
+	wire.Bind(new(gateway.MessageEventGateway), new(*event.MessageEventRabbitMqGateway)),
 )
 
 // Use Cases
-var setCreateRoomUseCaseInterface = wire.NewSet(
-	usecase.NewCreateRoomUseCase,
-	wire.Bind(new(usecase.CreateRoomUseCaseInterface), new(*usecase.CreateRoomUseCase)),
+var setCreateRoomUseCase = wire.NewSet(
+	impl.NewCreateRoomUseCase,
+	wire.Bind(new(usecase.CreateRoomUseCase), new(*impl.CreateRoomUseCase)),
 )
 
-var setSearchRoomUseCaseInterface = wire.NewSet(
-	usecase.NewSearchRoomUseCase,
-	wire.Bind(new(usecase.SearchRoomUseCaseInterface), new(*usecase.SearchRoomUseCase)),
+var setSearchRoomUseCase = wire.NewSet(
+	impl.NewSearchRoomUseCase,
+	wire.Bind(new(usecase.SearchRoomUseCase), new(*impl.SearchRoomUseCase)),
 )
 
-var setFindRoomUseCaseInterface = wire.NewSet(
-	usecase.NewFindRoomUseCase,
-	wire.Bind(new(usecase.FindRoomUseCaseInterface), new(*usecase.FindRoomUseCase)),
+var setFindRoomUseCase = wire.NewSet(
+	impl.NewFindRoomUseCase,
+	wire.Bind(new(usecase.FindRoomUseCase), new(*impl.FindRoomUseCase)),
 )
 
-var setUpdateRoomUseCaseInterface = wire.NewSet(
-	usecase.NewUpdateRoomUseCase,
-	wire.Bind(new(usecase.UpdateRoomUseCaseInterface), new(*usecase.UpdateRoomUseCase)),
+var setUpdateRoomUseCase = wire.NewSet(
+	impl.NewUpdateRoomUseCase,
+	wire.Bind(new(usecase.UpdateRoomUseCase), new(*impl.UpdateRoomUseCase)),
 )
 
-var setDeleteRoomUseCaseInterface = wire.NewSet(
-	usecase.NewDeleteRoomUseCase,
-	wire.Bind(new(usecase.DeleteRoomUseCaseInterface), new(*usecase.DeleteRoomUseCase)),
+var setDeleteRoomUseCase = wire.NewSet(
+	impl.NewDeleteRoomUseCase,
+	wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)),
 )
 
-var setCreateMessageUseCaseInterface = wire.NewSet(
-	usecase.NewCreateMessageUseCase,
-	wire.Bind(new(usecase.CreateMessageUseCaseInterface), new(*usecase.CreateMessageUseCase)),
+var setCreateMessageUseCase = wire.NewSet(
+	impl.NewCreateMessageUseCase,
+	wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)),
+)
+
+// Chat
+var setChat = wire.NewSet(
+	chat.NewChatCached,
+	wire.Bind(new(chat.Chat), new(*chat.ChatCached)),
 )
 
 // Handlers
-var setRoomHandlerInterface = wire.NewSet(
-	web.NewRoomHandler,
-	wire.Bind(new(web.RoomHandlerInterface), new(*web.RoomHandler)),
+var setRoomHandler = wire.NewSet(
+	room.NewRoomHandler,
+	wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)),
 )
 
-var setMessageHandlerInterface = wire.NewSet(
-	web.NewMessageHandler,
-	wire.Bind(new(web.MessageHandlerInterface), new(*web.MessageHandler)),
+var setMessageHandler = wire.NewSet(
+	message.NewMessageHandler,
+	wire.Bind(new(handler.MessageHandler), new(*message.MessageHandler)),
 )
 
 // Factories
-func NewApiRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *config.APIConfig) *gin.Engine {
+func NewRouter(
+	db *config.DatabaseConfig,
+	cfg *config.CacheConfig,
+	broker *config.BrokerConfig,
+	api *config.ApiConfig,
+) *gin.Engine {
 	wire.Build(
 		// Connections
-		database.DbConnection,
-		event.BrokerConnection,
+		database.PostgresConnection,
+		cache.RedisConnection,
+		event.RabbitMqConnection,
 
 		// Repositories
-		setRoomRepositoryInterface,
-		setMessageRepositoryInterface,
+		setRoomRepository,
+		setMessageRepository,
+
+		// Cache
+		setQueue,
 
 		// Gateways
-		setMessageGatewayInterface,
+		setMessageEventGateway,
 
 		// Use Cases
-		setCreateRoomUseCaseInterface,
-		setSearchRoomUseCaseInterface,
-		setFindRoomUseCaseInterface,
-		setUpdateRoomUseCaseInterface,
-		setDeleteRoomUseCaseInterface,
-		setCreateMessageUseCaseInterface,
+		setCreateRoomUseCase,
+		setSearchRoomUseCase,
+		setFindRoomUseCase,
+		setUpdateRoomUseCase,
+		setDeleteRoomUseCase,
+		setCreateMessageUseCase,
+
+		// Chat
+		setChat,
 
 		// Handlers
-		setRoomHandlerInterface,
-		setMessageHandlerInterface,
+		setRoomHandler,
+		setMessageHandler,
 
-		// Targets
-		web.ApiRouter,
+		// Router
+		web.Router,
 	)
+
 	return &gin.Engine{}
 }

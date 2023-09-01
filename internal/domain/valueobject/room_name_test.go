@@ -10,26 +10,39 @@ import (
 
 func TestRoomName_ShouldCreateARoomNameWhenValueIsValid(t *testing.T) {
 	value := "A Room Name"
-	name, err := NewRoomNameWith(value)
-	assert.NotNil(t, name)
+	roomName, err := NewRoomNameWith(value)
+	assert.NotNil(t, roomName)
 	assert.Nil(t, err)
-	assert.Equal(t, value, name.Value())
+	assert.Equal(t, value, roomName.Value())
 }
 
-func TestRoomName_ShouldReturnARequiredRoomNameErrorWhenValueIsEmpty(t *testing.T) {
-	value := ""
-	name, err := NewRoomNameWith(value)
-	assert.Nil(t, name)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrRequiredRoomName)
-}
+func TestRoomName_ShouldReturnAValidationErrorWhenValueIsInvalid(t *testing.T) {
+	testCases := []struct {
+		test  string
+		value string
+		err   error
+	}{
+		{
+			"empty value",
+			"",
+			ErrRequiredRoomName,
+		},
+		{
+			"invalid value size",
+			"dfaiuerewnvdiuoriewruuiwqeuqwe89123jladjsdasadiou23",
+			ErrInvalidRoomName,
+		},
+	}
 
-func TestRoomName_ShouldReturnASizeRoomNameErrorWhenValueHasMoreThan50Characters(t *testing.T) {
-	value := "dfaiuerewnvdiuoriewruuiwqeuqwe89123jladjsdasadiou23"
-	assert.Equal(t, len(value), 51)
+	assert.Equal(t, len(testCases[1].value), 51)
 
-	name, err := NewRoomNameWith(value)
-	assert.Nil(t, name)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, validation.ErrSizeRoomName)
+	for _, tc := range testCases {
+		t.Run(tc.test, func(t *testing.T) {
+			roomName, err := NewRoomNameWith(tc.value)
+			assert.Nil(t, roomName)
+			assert.NotNil(t, err)
+			assert.ErrorIs(t, err, tc.err)
+			assert.IsType(t, validation.ValidationError(""), err)
+		})
+	}
 }

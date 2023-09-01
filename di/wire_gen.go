@@ -10,59 +10,74 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/sesaquecruz/go-chat-api/config"
+	"github.com/sesaquecruz/go-chat-api/internal/chat"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/cache"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/message"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
+	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
 )
 
 // Injectors from wire.go:
 
 // Factories
-func NewApiRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *config.APIConfig) *gin.Engine {
-	sqlDB := database.DbConnection(db)
-	roomRepository := database.NewRoomRepository(sqlDB)
-	createRoomUseCase := usecase.NewCreateRoomUseCase(roomRepository)
-	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomRepository)
-	findRoomUseCase := usecase.NewFindRoomUseCase(roomRepository)
-	updateRoomUseCase := usecase.NewUpdateRoomUseCase(roomRepository)
-	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomRepository)
-	roomHandler := web.NewRoomHandler(createRoomUseCase, searchRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase)
-	messageRepository := database.NewMessageRepository(sqlDB)
-	connection := event.BrokerConnection(broker)
-	messageGateway := event.NewMessageGateway(connection)
-	createMessageUseCase := usecase.NewCreateMessageUseCase(roomRepository, messageRepository, messageGateway)
-	messageHandler := web.NewMessageHandler(createMessageUseCase)
-	engine := web.ApiRouter(api, roomHandler, messageHandler)
+func NewRouter(db *config.DatabaseConfig, cfg *config.CacheConfig, broker *config.BrokerConfig, api *config.ApiConfig) *gin.Engine {
+	sqlDB := database.PostgresConnection(db)
+	roomPostgresRepository := database.NewRoomPostgresRepository(sqlDB)
+	createRoomUseCase := impl.NewCreateRoomUseCase(roomPostgresRepository)
+	searchRoomUseCase := impl.NewSearchRoomUseCase(roomPostgresRepository)
+	findRoomUseCase := impl.NewFindRoomUseCase(roomPostgresRepository)
+	updateRoomUseCase := impl.NewUpdateRoomUseCase(roomPostgresRepository)
+	deleteRoomUseCase := impl.NewDeleteRoomUseCase(roomPostgresRepository)
+	roomHandler := room.NewRoomHandler(createRoomUseCase, searchRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase)
+	messagePostgresRepository := database.NewMessagePostgresRepository(sqlDB)
+	connection := event.RabbitMqConnection(broker)
+	messageEventRabbitMqGateway := event.NewMessageEventRabbitMqGateway(connection)
+	createMessageUseCase := impl.NewCreateMessageUseCase(roomPostgresRepository, messagePostgresRepository, messageEventRabbitMqGateway)
+	client := cache.RedisConnection(cfg)
+	redisQueue := cache.NewRedisQueue(client)
+	chatCached := chat.NewChatCached(messageEventRabbitMqGateway, redisQueue)
+	messageHandler := message.NewMessageHandler(createMessageUseCase, findRoomUseCase, chatCached)
+	engine := web.Router(api, roomHandler, messageHandler)
 	return engine
 }
 
 // wire.go:
 
 // Repositories
-var setRoomRepositoryInterface = wire.NewSet(database.NewRoomRepository, wire.Bind(new(repository.RoomRepositoryInterface), new(*database.RoomRepository)))
+var setRoomRepository = wire.NewSet(database.NewRoomPostgresRepository, wire.Bind(new(repository.RoomRepository), new(*database.RoomPostgresRepository)))
 
-var setMessageRepositoryInterface = wire.NewSet(database.NewMessageRepository, wire.Bind(new(repository.MessageRepositoryInterface), new(*database.MessageRepository)))
+var setMessageRepository = wire.NewSet(database.NewMessagePostgresRepository, wire.Bind(new(repository.MessageRepository), new(*database.MessagePostgresRepository)))
+
+// Cache
+var setQueue = wire.NewSet(cache.NewRedisQueue, wire.Bind(new(cache.Queue), new(*cache.RedisQueue)))
 
 // Gateways
-var setMessageGatewayInterface = wire.NewSet(event.NewMessageGateway, wire.Bind(new(gateway.MessageGatewayInterface), new(*event.MessageGateway)))
+var setMessageEventGateway = wire.NewSet(event.NewMessageEventRabbitMqGateway, wire.Bind(new(gateway.MessageEventGateway), new(*event.MessageEventRabbitMqGateway)))
 
 // Use Cases
-var setCreateRoomUseCaseInterface = wire.NewSet(usecase.NewCreateRoomUseCase, wire.Bind(new(usecase.CreateRoomUseCaseInterface), new(*usecase.CreateRoomUseCase)))
+var setCreateRoomUseCase = wire.NewSet(impl.NewCreateRoomUseCase, wire.Bind(new(usecase.CreateRoomUseCase), new(*impl.CreateRoomUseCase)))
 
-var setSearchRoomUseCaseInterface = wire.NewSet(usecase.NewSearchRoomUseCase, wire.Bind(new(usecase.SearchRoomUseCaseInterface), new(*usecase.SearchRoomUseCase)))
+var setSearchRoomUseCase = wire.NewSet(impl.NewSearchRoomUseCase, wire.Bind(new(usecase.SearchRoomUseCase), new(*impl.SearchRoomUseCase)))
 
-var setFindRoomUseCaseInterface = wire.NewSet(usecase.NewFindRoomUseCase, wire.Bind(new(usecase.FindRoomUseCaseInterface), new(*usecase.FindRoomUseCase)))
+var setFindRoomUseCase = wire.NewSet(impl.NewFindRoomUseCase, wire.Bind(new(usecase.FindRoomUseCase), new(*impl.FindRoomUseCase)))
 
-var setUpdateRoomUseCaseInterface = wire.NewSet(usecase.NewUpdateRoomUseCase, wire.Bind(new(usecase.UpdateRoomUseCaseInterface), new(*usecase.UpdateRoomUseCase)))
+var setUpdateRoomUseCase = wire.NewSet(impl.NewUpdateRoomUseCase, wire.Bind(new(usecase.UpdateRoomUseCase), new(*impl.UpdateRoomUseCase)))
 
-var setDeleteRoomUseCaseInterface = wire.NewSet(usecase.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCaseInterface), new(*usecase.DeleteRoomUseCase)))
+var setDeleteRoomUseCase = wire.NewSet(impl.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)))
 
-var setCreateMessageUseCaseInterface = wire.NewSet(usecase.NewCreateMessageUseCase, wire.Bind(new(usecase.CreateMessageUseCaseInterface), new(*usecase.CreateMessageUseCase)))
+var setCreateMessageUseCase = wire.NewSet(impl.NewCreateMessageUseCase, wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)))
+
+// Chat
+var setChat = wire.NewSet(chat.NewChatCached, wire.Bind(new(chat.Chat), new(*chat.ChatCached)))
 
 // Handlers
-var setRoomHandlerInterface = wire.NewSet(web.NewRoomHandler, wire.Bind(new(web.RoomHandlerInterface), new(*web.RoomHandler)))
+var setRoomHandler = wire.NewSet(room.NewRoomHandler, wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)))
 
-var setMessageHandlerInterface = wire.NewSet(web.NewMessageHandler, wire.Bind(new(web.MessageHandlerInterface), new(*web.MessageHandler)))
+var setMessageHandler = wire.NewSet(message.NewMessageHandler, wire.Bind(new(handler.MessageHandler), new(*message.MessageHandler)))

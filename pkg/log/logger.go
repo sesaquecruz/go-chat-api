@@ -19,10 +19,10 @@ func NewLogger(prefix string) *Logger {
 	flags := log.Ldate | log.Ltime
 
 	return &Logger{
-		debug:   log.New(writer, "DEBUG  ["+prefix+"]: ", flags),
-		info:    log.New(writer, "INFO   ["+prefix+"]: ", flags),
-		warning: log.New(writer, "WARNIG ["+prefix+"]: ", flags),
-		err:     log.New(writer, "ERROR  ["+prefix+"]: ", flags),
+		debug:   log.New(writer, "DEBUG   ["+prefix+"]: ", flags),
+		info:    log.New(writer, "INFO    ["+prefix+"]: ", flags),
+		warning: log.New(writer, "WARNING ["+prefix+"]: ", flags),
+		err:     log.New(writer, "ERROR   ["+prefix+"]: ", flags),
 		writer:  writer,
 	}
 }

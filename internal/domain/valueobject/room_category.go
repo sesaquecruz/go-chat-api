@@ -2,13 +2,18 @@ package valueobject
 
 import "github.com/sesaquecruz/go-chat-api/internal/domain/validation"
 
+const (
+	ErrRequiredRoomCategory = validation.ValidationError("room category is required")
+	ErrInvalidRoomCategory  = validation.ValidationError("room category is invalid")
+)
+
 type RoomCategory struct {
 	value string
 }
 
 func NewRoomCategoryWith(value string) (*RoomCategory, error) {
 	if value == "" {
-		return nil, validation.ErrRequiredRoomCategory
+		return nil, ErrRequiredRoomCategory
 	}
 
 	switch value {
@@ -21,7 +26,7 @@ func NewRoomCategoryWith(value string) (*RoomCategory, error) {
 	case "Language":
 	case "Science":
 	default:
-		return nil, validation.ErrInvalidRoomCategory
+		return nil, ErrInvalidRoomCategory
 	}
 
 	return &RoomCategory{value: value}, nil

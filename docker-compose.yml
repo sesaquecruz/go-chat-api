@@ -40,6 +40,16 @@ services:
       timeout: 10s
       retries: 6
 
+  redis:
+    container_name: redis
+    image: redis:7.2-alpine
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: redis-cli ping
+      timeout: 10s
+      retries: 6
+
   app:
     profiles:
       - app
@@ -49,6 +59,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     build: .
     environment:
       - APP_DATABASE_HOST=postgres
@@ -56,6 +68,8 @@ services:
       - APP_DATABASE_USER=postgres
       - APP_DATABASE_PASSWORD=postgres
       - APP_DATABASE_NAME=chat
+      - APP_CACHE_HOST=redis
+      - APP_CACHE_PORT=6379
       - APP_BROKER_HOST=rabbitmq
       - APP_BROKER_PORT=5672
       - APP_BROKER_USER=guest
