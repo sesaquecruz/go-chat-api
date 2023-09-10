@@ -20,6 +20,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
+	"github.com/sesaquecruz/go-chat-api/pkg/health"
 )
 
 // Injectors from wire.go:
@@ -27,6 +28,8 @@ import (
 // Factories
 func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *config.ApiConfig) *gin.Engine {
 	sqlDB := database.PostgresConnection(db)
+	connection := event.RabbitMqConnection(broker)
+	healthCheck := health.NewHealthCheck(sqlDB, connection)
 	roomPostgresRepository := database.NewRoomPostgresRepository(sqlDB)
 	createRoomUseCase := impl.NewCreateRoomUseCase(roomPostgresRepository)
 	searchRoomUseCase := impl.NewSearchRoomUseCase(roomPostgresRepository)
@@ -35,11 +38,10 @@ func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *conf
 	deleteRoomUseCase := impl.NewDeleteRoomUseCase(roomPostgresRepository)
 	roomHandler := room.NewRoomHandler(createRoomUseCase, searchRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase)
 	messagePostgresRepository := database.NewMessagePostgresRepository(sqlDB)
-	connection := event.RabbitMqConnection(broker)
 	messageEventRabbitMqGateway := event.NewMessageEventRabbitMqGateway(connection)
 	createMessageUseCase := impl.NewCreateMessageUseCase(roomPostgresRepository, messagePostgresRepository, messageEventRabbitMqGateway)
 	messageHandler := message.NewMessageHandler(createMessageUseCase, findRoomUseCase)
-	engine := web.Router(api, roomHandler, messageHandler)
+	engine := web.Router(api, healthCheck, roomHandler, messageHandler)
 	return engine
 }
 
@@ -65,6 +67,9 @@ var setUpdateRoomUseCase = wire.NewSet(impl.NewUpdateRoomUseCase, wire.Bind(new(
 var setDeleteRoomUseCase = wire.NewSet(impl.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)))
 
 var setCreateMessageUseCase = wire.NewSet(impl.NewCreateMessageUseCase, wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)))
+
+// Health
+var setHealth = wire.NewSet(health.NewHealthCheck, wire.Bind(new(health.Health), new(*health.HealthCheck)))
 
 // Handlers
 var setRoomHandler = wire.NewSet(room.NewRoomHandler, wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)))

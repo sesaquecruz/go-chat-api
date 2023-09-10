@@ -15,6 +15,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
+	"github.com/sesaquecruz/go-chat-api/pkg/health"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -68,6 +69,12 @@ var setCreateMessageUseCase = wire.NewSet(
 	wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)),
 )
 
+// Health
+var setHealth = wire.NewSet(
+	health.NewHealthCheck,
+	wire.Bind(new(health.Health), new(*health.HealthCheck)),
+)
+
 // Handlers
 var setRoomHandler = wire.NewSet(
 	room.NewRoomHandler,
@@ -104,6 +111,9 @@ func NewRouter(
 		setUpdateRoomUseCase,
 		setDeleteRoomUseCase,
 		setCreateMessageUseCase,
+
+		// Health
+		setHealth,
 
 		// Handlers
 		setRoomHandler,

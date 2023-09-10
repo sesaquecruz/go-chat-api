@@ -23,11 +23,5 @@ func PostgresConnection(cfg *config.DatabaseConfig) *sql.DB {
 		return nil
 	}
 
-	err = db.Ping()
-	if err != nil {
-		logger.Fatal(err)
-		return nil
-	}
-
 	return db
 }

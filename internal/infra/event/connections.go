@@ -22,12 +22,5 @@ func RabbitMqConnection(cfg *config.BrokerConfig) *amqp.Connection {
 		return nil
 	}
 
-	ch, err := conn.Channel()
-	if err != nil {
-		logger.Fatal(err)
-		return nil
-	}
-	defer ch.Close()
-
 	return conn
 }
