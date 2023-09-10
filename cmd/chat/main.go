@@ -13,7 +13,7 @@ func main() {
 
 	cfg := config.Load()
 
-	router := di.NewRouter(&cfg.Database, &cfg.Cache, &cfg.Broker, &cfg.Api)
+	router := di.NewRouter(&cfg.Database, &cfg.Broker, &cfg.Api)
 	addr := fmt.Sprintf(":%s", cfg.Api.Port)
 
 	logger.Infof("server started on %s\n", addr)

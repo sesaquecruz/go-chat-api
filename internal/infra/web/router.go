@@ -29,7 +29,6 @@ func Router(
 	path.DELETE("/rooms/:id", roomHandler.DeleteRoom)
 
 	path.POST("/rooms/:id/send", messageHandler.CreateMessage)
-	path.GET("/rooms/:id/subscribe", messageHandler.ReceiveMessage)
 
 	return r
 }

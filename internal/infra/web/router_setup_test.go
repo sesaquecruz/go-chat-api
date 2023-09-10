@@ -75,7 +75,6 @@ func (s *RouterTestSuite) SetupTest() {
 	messageHandler := message.NewMessageHandler(
 		createMessageUseCase,
 		findRoomUseCase,
-		nil,
 	)
 
 	router := Router(&config.ApiConfig{

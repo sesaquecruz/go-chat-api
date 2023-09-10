@@ -14,11 +14,6 @@ type DatabaseConfig struct {
 	Name     string
 }
 
-type CacheConfig struct {
-	Host string
-	Port string
-}
-
 type BrokerConfig struct {
 	Host     string
 	Port     string
@@ -37,7 +32,6 @@ type ApiConfig struct {
 
 type Config struct {
 	Database DatabaseConfig
-	Cache    CacheConfig
 	Broker   BrokerConfig
 	Api      ApiConfig
 }
@@ -94,11 +88,6 @@ func Load() Config {
 		User:     getValue("APP_DATABASE_USER"),
 		Password: getValue("APP_DATABASE_PASSWORD"),
 		Name:     getValue("APP_DATABASE_NAME"),
-	}
-
-	cfg.Cache = CacheConfig{
-		Host: getValue("APP_CACHE_HOST"),
-		Port: getValue("APP_CACHE_PORT"),
 	}
 
 	cfg.Broker = BrokerConfig{
