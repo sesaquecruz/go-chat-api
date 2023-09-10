@@ -3,6 +3,7 @@ package web
 import (
 	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
+	"github.com/sesaquecruz/go-chat-api/pkg/health"
 	"github.com/sesaquecruz/go-chat-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -10,12 +11,15 @@ import (
 
 func Router(
 	cfg *config.ApiConfig,
+	healthCheck health.Health,
 	roomHandler handler.RoomHandler,
 	messageHandler handler.MessageHandler,
 ) *gin.Engine {
 	gin.SetMode(cfg.Mode)
 
 	r := gin.New()
+
+	r.GET(cfg.Path+"/healthz", gin.WrapH(healthCheck.Handler()))
 
 	r.Use(middleware.CorsMiddleware(cfg.AllowOrigins))
 	r.Use(middleware.JwtMiddleware(cfg.JwtIssuer, []string{cfg.JwtAudience}))

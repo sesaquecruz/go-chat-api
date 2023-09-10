@@ -14,6 +14,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/message"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
+	"github.com/sesaquecruz/go-chat-api/pkg/health"
 	"github.com/sesaquecruz/go-chat-api/test/services"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +65,8 @@ func (s *RouterTestSuite) SetupTest() {
 	deleteRoomUseCase := impl.NewDeleteRoomUseCase(roomRepository)
 	createMessageUseCase := impl.NewCreateMessageUseCase(roomRepository, messageRepository, messageEventGateway)
 
+	health := health.NewHealthCheck(db, conn)
+
 	roomHandler := room.NewRoomHandler(
 		createRoomUseCase,
 		searchRoomUseCase,
@@ -85,6 +88,7 @@ func (s *RouterTestSuite) SetupTest() {
 		JwtIssuer:    auth.GetIssuer(),
 		JwtAudience:  auth.GetAudience(),
 	},
+		health,
 		roomHandler,
 		messageHandler,
 	)
@@ -112,6 +116,18 @@ func (s *RouterTestSuite) TearDownSuite() {
 
 func TestRouterTestSuite(t *testing.T) {
 	suite.Run(t, new(RouterTestSuite))
+}
+
+func (s *RouterTestSuite) TestHealth() {
+	defer db.Clear()
+	t := s.T()
+	r := s.router
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/healthz", nil)
+
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func (s *RouterTestSuite) TestAllowOrigins() {
