@@ -10,10 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/sesaquecruz/go-chat-api/config"
-	"github.com/sesaquecruz/go-chat-api/internal/chat"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/cache"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
@@ -27,7 +25,7 @@ import (
 // Injectors from wire.go:
 
 // Factories
-func NewRouter(db *config.DatabaseConfig, cfg *config.CacheConfig, broker *config.BrokerConfig, api *config.ApiConfig) *gin.Engine {
+func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *config.ApiConfig) *gin.Engine {
 	sqlDB := database.PostgresConnection(db)
 	roomPostgresRepository := database.NewRoomPostgresRepository(sqlDB)
 	createRoomUseCase := impl.NewCreateRoomUseCase(roomPostgresRepository)
@@ -40,10 +38,7 @@ func NewRouter(db *config.DatabaseConfig, cfg *config.CacheConfig, broker *confi
 	connection := event.RabbitMqConnection(broker)
 	messageEventRabbitMqGateway := event.NewMessageEventRabbitMqGateway(connection)
 	createMessageUseCase := impl.NewCreateMessageUseCase(roomPostgresRepository, messagePostgresRepository, messageEventRabbitMqGateway)
-	client := cache.RedisConnection(cfg)
-	redisQueue := cache.NewRedisQueue(client)
-	chatCached := chat.NewChatCached(messageEventRabbitMqGateway, redisQueue)
-	messageHandler := message.NewMessageHandler(createMessageUseCase, findRoomUseCase, chatCached)
+	messageHandler := message.NewMessageHandler(createMessageUseCase, findRoomUseCase)
 	engine := web.Router(api, roomHandler, messageHandler)
 	return engine
 }
@@ -54,9 +49,6 @@ func NewRouter(db *config.DatabaseConfig, cfg *config.CacheConfig, broker *confi
 var setRoomRepository = wire.NewSet(database.NewRoomPostgresRepository, wire.Bind(new(repository.RoomRepository), new(*database.RoomPostgresRepository)))
 
 var setMessageRepository = wire.NewSet(database.NewMessagePostgresRepository, wire.Bind(new(repository.MessageRepository), new(*database.MessagePostgresRepository)))
-
-// Cache
-var setQueue = wire.NewSet(cache.NewRedisQueue, wire.Bind(new(cache.Queue), new(*cache.RedisQueue)))
 
 // Gateways
 var setMessageEventGateway = wire.NewSet(event.NewMessageEventRabbitMqGateway, wire.Bind(new(gateway.MessageEventGateway), new(*event.MessageEventRabbitMqGateway)))
@@ -73,9 +65,6 @@ var setUpdateRoomUseCase = wire.NewSet(impl.NewUpdateRoomUseCase, wire.Bind(new(
 var setDeleteRoomUseCase = wire.NewSet(impl.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)))
 
 var setCreateMessageUseCase = wire.NewSet(impl.NewCreateMessageUseCase, wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)))
-
-// Chat
-var setChat = wire.NewSet(chat.NewChatCached, wire.Bind(new(chat.Chat), new(*chat.ChatCached)))
 
 // Handlers
 var setRoomHandler = wire.NewSet(room.NewRoomHandler, wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)))
