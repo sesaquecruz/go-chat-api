@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:15.3-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready
+      timeout: 10s
+      retries: 6
+
+  migrate:
+    container_name: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations:ro
+    command: [ "-path", "/migrations", "-database",  "postgres://postgres:postgres@postgres:5432/chat?sslmode=disable", "-verbose", "up" ]
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.12.3-management
+    volumes:
+      - "./rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
+      - "./rabbitmq.json:/etc/rabbitmq/definitions.json"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      timeout: 10s
+      retries: 6
+
+  app:
+    profiles:
+      - app
+    container_name: app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    build: .
+    environment:
+      - APP_DATABASE_HOST=postgres
+      - APP_DATABASE_PORT=5432
+      - APP_DATABASE_USER=postgres
+      - APP_DATABASE_PASSWORD=postgres
+      - APP_DATABASE_NAME=chat
+      - APP_BROKER_HOST=rabbitmq
+      - APP_BROKER_PORT=5672
+      - APP_BROKER_USER=guest
+      - APP_BROKER_PASSWORD=guest
+      - APP_API_PORT=8080
+      - APP_API_PATH=/api/v1
+      - APP_API_MODE=release
+      - APP_API_CORS_ORIGINS=*
+      - APP_API_JWT_ISSUER=https://dev-j6pmr0ckitt2062o.us.auth0.com/
+      - APP_API_JWT_AUDIENCE=https://dev-j6pmr0ckitt2062o.us.auth0.com/userinfo
+    ports:
+      - "8080:8080"
