@@ -26,9 +26,11 @@ func NewRoomPostgresRepository(db *sql.DB) *RoomPostgresRepository {
 }
 
 func (r *RoomPostgresRepository) Save(ctx context.Context, room *entity.Room) error {
+	m := model.NewRoomModel(room)
+
 	stmt, err := r.db.PrepareContext(ctx, `
-		INSERT INTO rooms (id, admin_id, name, category, created_at, updated_at) 
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO rooms (id, admin_id, name, category, created_at, updated_at, deleted_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`)
 	if err != nil {
 		r.logger.Error(err)
@@ -38,12 +40,13 @@ func (r *RoomPostgresRepository) Save(ctx context.Context, room *entity.Room) er
 
 	_, err = stmt.ExecContext(
 		ctx,
-		room.Id().Value(),
-		room.AdminId().Value(),
-		room.Name().Value(),
-		room.Category().Value(),
-		room.CreatedAt().Value(),
-		room.UpdatedAt().Value(),
+		m.Id,
+		m.AdminId,
+		m.Name,
+		m.Category,
+		m.CreatedAt,
+		m.UpdatedAt,
+		m.DeletedAt,
 	)
 	if err != nil {
 		r.logger.Error(err)
@@ -55,7 +58,7 @@ func (r *RoomPostgresRepository) Save(ctx context.Context, room *entity.Room) er
 
 func (r *RoomPostgresRepository) FindById(ctx context.Context, id *valueobject.Id) (*entity.Room, error) {
 	stmt, err := r.db.PrepareContext(ctx, `
-		SELECT id, admin_id, name, category, created_at, updated_at 
+		SELECT id, admin_id, name, category, created_at, updated_at, deleted_at
 		FROM rooms 
 		WHERE id = $1
 	`)
@@ -69,11 +72,12 @@ func (r *RoomPostgresRepository) FindById(ctx context.Context, id *valueobject.I
 
 	err = stmt.QueryRowContext(ctx, id.Value()).Scan(
 		&m.Id,
-		&m.Admin_id,
+		&m.AdminId,
 		&m.Name,
 		&m.Category,
 		&m.CreatedAt,
 		&m.UpdatedAt,
+		&m.DeletedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -95,9 +99,9 @@ func (r *RoomPostgresRepository) FindById(ctx context.Context, id *valueobject.I
 
 func (r *RoomPostgresRepository) Search(ctx context.Context, query *pagination.Query) (*pagination.Page[*entity.Room], error) {
 	stmt1, err := r.db.PrepareContext(ctx, `
-		SELECT id, admin_id, name, category, created_at, updated_at 
+		SELECT id, admin_id, name, category, created_at, updated_at, deleted_at, COUNT(*) OVER () AS total
 		FROM rooms 
-		WHERE ($1 = '') OR (UPPER(name) LIKE '%' || $1 || '%') OR (UPPER(category::text) LIKE '%' || $1 || '%') 
+		WHERE deleted_at IS NOT NULL AND ($1 = '') OR (UPPER(name) LIKE '%' || $1 || '%') OR (UPPER(category::text) LIKE '%' || $1 || '%') 
 		ORDER BY name `+query.Sort()+`
 		LIMIT $2 
 		OFFSET $3
@@ -108,17 +112,6 @@ func (r *RoomPostgresRepository) Search(ctx context.Context, query *pagination.Q
 	}
 	defer stmt1.Close()
 
-	stmt2, err := r.db.PrepareContext(ctx, `
-		SELECT COUNT(*) 
-		FROM rooms 
-		WHERE ($1 = '') OR (UPPER(name) LIKE '%' || $1 || '%') OR (UPPER(category::text) LIKE '%' || $1 || '%')
-	`)
-	if err != nil {
-		r.logger.Error(err)
-		return nil, err
-	}
-	defer stmt2.Close()
-
 	rows, err := stmt1.QueryContext(ctx, query.Search(), query.Size(), query.Size()*query.Page())
 	if err != nil {
 		r.logger.Error(err)
@@ -127,17 +120,20 @@ func (r *RoomPostgresRepository) Search(ctx context.Context, query *pagination.Q
 	defer rows.Close()
 
 	var items []*entity.Room
+	var total int64
 
 	for rows.Next() {
 		var m model.RoomModel
 
 		err := rows.Scan(
 			&m.Id,
-			&m.Admin_id,
+			&m.AdminId,
 			&m.Name,
 			&m.Category,
 			&m.CreatedAt,
 			&m.UpdatedAt,
+			&m.DeletedAt,
+			&total,
 		)
 		if err != nil {
 			r.logger.Error(err)
@@ -153,22 +149,16 @@ func (r *RoomPostgresRepository) Search(ctx context.Context, query *pagination.Q
 		items = append(items, room)
 	}
 
-	var total int64
-
-	err = stmt2.QueryRowContext(ctx, query.Search()).Scan(&total)
-	if err != nil {
-		r.logger.Error(err)
-		return nil, err
-	}
-
 	page := pagination.NewPage[*entity.Room](query.Page(), query.Size(), total, items)
 	return page, nil
 }
 
 func (r *RoomPostgresRepository) Update(ctx context.Context, room *entity.Room) error {
+	m := model.NewRoomModel(room)
+
 	stmt, err := r.db.PrepareContext(ctx, `
 		UPDATE rooms 
-		SET admin_id = $2, name = $3, category = $4, created_at = $5, updated_at = $6
+		SET admin_id = $2, name = $3, category = $4, created_at = $5, updated_at = $6, deleted_at = $7
 		WHERE id = $1
 	`)
 	if err != nil {
@@ -179,33 +169,14 @@ func (r *RoomPostgresRepository) Update(ctx context.Context, room *entity.Room) 
 
 	_, err = stmt.ExecContext(
 		ctx,
-		room.Id().Value(),
-		room.AdminId().Value(),
-		room.Name().Value(),
-		room.Category().Value(),
-		room.CreatedAt().Value(),
-		room.UpdatedAt().Value(),
+		m.Id,
+		m.AdminId,
+		m.Name,
+		m.Category,
+		m.CreatedAt,
+		m.UpdatedAt,
+		m.DeletedAt,
 	)
-	if err != nil {
-		r.logger.Error(err)
-		return err
-	}
-
-	return nil
-}
-
-func (r *RoomPostgresRepository) Delete(ctx context.Context, id *valueobject.Id) error {
-	stmt, err := r.db.PrepareContext(ctx, `
-		DELETE FROM rooms 
-		WHERE id = $1
-	`)
-	if err != nil {
-		r.logger.Error(err)
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.ExecContext(ctx, id.Value())
 	if err != nil {
 		r.logger.Error(err)
 		return err

@@ -1,0 +1,297 @@
+basePath: /api/v1
+definitions:
+  dto.HttpError:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  dto.MessageRequest:
+    properties:
+      text:
+        type: string
+    type: object
+  dto.RoomPage:
+    properties:
+      page:
+        type: integer
+      rooms:
+        items:
+          $ref: '#/definitions/dto.RoomResponse'
+        type: array
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.RoomRequest:
+    properties:
+      category:
+        type: string
+      name:
+        type: string
+    type: object
+  dto.RoomResponse:
+    properties:
+      category:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact:
+    name: API Support
+    url: https://github.com/sesaquecruz/go-chat-api
+  description: A Rest API for Chat App.
+  license:
+    name: MIT
+    url: https://github.com/sesaquecruz/go-chat-api
+  termsOfService: https://github.com/sesaquecruz/go-chat-api
+  title: Chat API
+  version: 1.0.0
+paths:
+  /rooms:
+    get:
+      consumes:
+      - application/json
+      description: Search chat rooms.
+      parameters:
+      - default: "0"
+        description: Page
+        in: query
+        name: page
+        type: string
+      - default: "10"
+        description: Size
+        in: query
+        name: size
+        type: string
+      - default: asc
+        description: Sort
+        in: query
+        name: sort
+        type: string
+      - default: ""
+        description: Search Term
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.RoomPage'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Search rooms
+      tags:
+      - rooms
+    post:
+      consumes:
+      - application/json
+      description: 'Create a new chat room. The room categories are: [General, Tech,
+        Game, Book, Movie, Music, Language, Science].'
+      parameters:
+      - description: Room
+        in: body
+        name: room
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RoomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Location
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Create a room
+      tags:
+      - rooms
+  /rooms/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a chat room if the user is room admin.
+      parameters:
+      - description: Room Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Delete a room
+      tags:
+      - rooms
+    get:
+      consumes:
+      - application/json
+      description: Find a chat room.
+      parameters:
+      - description: Room Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RoomResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Find a room
+      tags:
+      - rooms
+    put:
+      consumes:
+      - application/json
+      description: 'Update a chat room if the user is room admin. The room categories
+        are: [General, Tech, Game, Book, Movie, Music, Language, Science].'
+      parameters:
+      - description: Room Id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room
+        in: body
+        name: room
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RoomRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Update a room
+      tags:
+      - rooms
+  /rooms/{id}/send:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to the chat room.
+      parameters:
+      - description: Room Id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/dto.MessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.HttpError'
+        "500":
+          description: Internal Server Error
+      security:
+      - Bearer token: []
+      summary: Send a message
+      tags:
+      - rooms
+securityDefinitions:
+  Bearer token:
+    description: API authorization token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

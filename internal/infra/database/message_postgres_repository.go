@@ -25,6 +25,8 @@ func NewMessagePostgresRepository(db *sql.DB) *MessagePostgresRepository {
 }
 
 func (r *MessagePostgresRepository) Save(ctx context.Context, message *entity.Message) error {
+	m := model.NewMessageModel(message)
+
 	stmt, err := r.db.PrepareContext(ctx, `
 		INSERT INTO messages (id, room_id, sender_id, sender_name, text, created_at) 
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -37,12 +39,12 @@ func (r *MessagePostgresRepository) Save(ctx context.Context, message *entity.Me
 
 	_, err = stmt.ExecContext(
 		ctx,
-		message.Id().Value(),
-		message.RoomId().Value(),
-		message.SenderId().Value(),
-		message.SenderName().Value(),
-		message.Text().Value(),
-		message.CreatedAt().Value(),
+		m.Id,
+		m.RoomId,
+		m.SenderId,
+		m.SenderName,
+		m.Text,
+		m.CreatedAt,
 	)
 	if err != nil {
 		r.logger.Error(err)

@@ -1,21 +1,152 @@
-package web
+package router
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/sesaquecruz/go-chat-api/config"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/entity"
-	"github.com/sesaquecruz/go-chat-api/internal/domain/pagination"
+	domain_event "github.com/sesaquecruz/go-chat-api/internal/domain/event"
+	"github.com/sesaquecruz/go-chat-api/internal/domain/gateway"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/dto"
+	room_handler "github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
+	usecase "github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
+	"github.com/sesaquecruz/go-chat-api/pkg/health"
+	"github.com/sesaquecruz/go-chat-api/test/services"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
+
+var db, _ = services.NewPostgresContainer(context.Background(), "file://../../../../")
+var broker, _ = services.NewRabbitmqContainer(context.Background(), "../../../../")
+var auth = services.NewAuth0Server()
+
+type RouterTestSuite struct {
+	suite.Suite
+	ctx                 context.Context
+	roomRepository      repository.RoomRepository
+	messageRepository   repository.MessageRepository
+	messageEventGateway gateway.MessageEventGateway
+	router              *gin.Engine
+}
+
+func (s *RouterTestSuite) SetupTest() {
+	db.Clear()
+
+	db := database.PostgresConnection(&config.DatabaseConfig{
+		Host:     db.Host,
+		Port:     db.Port,
+		User:     db.User,
+		Password: db.Password,
+		Name:     db.Name,
+	})
+
+	conn := event.RabbitMqConnection(&config.BrokerConfig{
+		Host:     broker.Host,
+		Port:     broker.Port,
+		User:     broker.User,
+		Password: broker.Password,
+	})
+
+	roomRepository := database.NewRoomPostgresRepository(db)
+	messageRepository := database.NewMessagePostgresRepository(db)
+
+	messageEventGateway := event.NewMessageEventRabbitMqGateway(conn)
+
+	createRoomUseCase := usecase.NewCreateRoomUseCase(roomRepository)
+	findRoomUseCase := usecase.NewFindRoomUseCase(roomRepository)
+	searchRoomUseCase := usecase.NewSearchRoomUseCase(roomRepository)
+	updateRoomUsecase := usecase.NewUpdateRoomUseCase(roomRepository)
+	deleteRoomUseCase := usecase.NewDeleteRoomUseCase(roomRepository)
+	createMessageUseCase := usecase.NewSendMessageUseCase(roomRepository, messageRepository, messageEventGateway)
+
+	health := health.NewHealthCheck(db, conn)
+
+	roomHandler := room_handler.NewRoomHandler(
+		createRoomUseCase,
+		searchRoomUseCase,
+		findRoomUseCase,
+		updateRoomUsecase,
+		deleteRoomUseCase,
+		createMessageUseCase,
+	)
+
+	router := ApiRouter(&config.ApiConfig{
+		Port:         "",
+		Path:         "/api/v1",
+		Mode:         "release",
+		AllowOrigins: "*",
+		JwtIssuer:    auth.GetIssuer(),
+		JwtAudience:  auth.GetAudience(),
+	},
+		health,
+		roomHandler,
+	)
+
+	s.ctx = context.Background()
+	s.roomRepository = roomRepository
+	s.messageRepository = messageRepository
+	s.messageEventGateway = messageEventGateway
+	s.router = router
+}
+
+func (s *RouterTestSuite) TearDownSuite() {
+	if err := db.Terminate(s.ctx); err != nil {
+		s.T().Fatalf("error terminating db container: %s", err)
+	}
+
+	if err := broker.Terminate(s.ctx); err != nil {
+		s.T().Fatalf("error terminating broker container: %s", err)
+	}
+
+	if err := auth.Terminate(s.ctx); err != nil {
+		s.T().Fatalf("error terminating auth server: %s", err)
+	}
+}
+
+func TestRouterTestSuite(t *testing.T) {
+	suite.Run(t, new(RouterTestSuite))
+}
+
+func (s *RouterTestSuite) TestHealth() {
+	defer db.Clear()
+	t := s.T()
+	r := s.router
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/healthz", nil)
+
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func (s *RouterTestSuite) TestAllowOrigins() {
+	defer db.Clear()
+	t := s.T()
+	r := s.router
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodOptions, "/api/v1", nil)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, "*", res.Header.Get("Access-Control-Allow-Origin"))
+}
 
 func createARoom(adminId, name, category string) *entity.Room {
 	roomAdminId, _ := valueobject.NewUserIdWith(adminId)
@@ -130,6 +261,7 @@ func (s *RouterTestSuite) TestShouldReturnRoomPages() {
 	room3 := createARoom(sub, "Java", "Tech")
 	room4 := createARoom(sub, "Need for Speed Undergroud", "Game")
 	room5 := createARoom(sub, "Need for Speed Most Wanted", "Game")
+
 	s.roomRepository.Save(s.ctx, room1)
 	s.roomRepository.Save(s.ctx, room2)
 	s.roomRepository.Save(s.ctx, room3)
@@ -138,15 +270,15 @@ func (s *RouterTestSuite) TestShouldReturnRoomPages() {
 
 	testCases := []struct {
 		query string
-		page  pagination.Page[dto.RoomResponseDto]
+		page  dto.RoomPage
 	}{
 		{
 			query: "?page=0&size=2&sort=asc&search=tech",
-			page: pagination.Page[dto.RoomResponseDto]{
+			page: dto.RoomPage{
 				Page:  0,
 				Size:  2,
 				Total: 3,
-				Items: []dto.RoomResponseDto{
+				Rooms: []*dto.RoomResponse{
 					{
 						Id:       room2.Id().Value(),
 						Name:     room2.Name().Value(),
@@ -162,11 +294,11 @@ func (s *RouterTestSuite) TestShouldReturnRoomPages() {
 		},
 		{
 			query: "?page=1&size=2&sort=asc&search=tech",
-			page: pagination.Page[dto.RoomResponseDto]{
+			page: dto.RoomPage{
 				Page:  1,
 				Size:  2,
 				Total: 3,
-				Items: []dto.RoomResponseDto{
+				Rooms: []*dto.RoomResponse{
 					{
 						Id:       room1.Id().Value(),
 						Name:     room1.Name().Value(),
@@ -177,11 +309,11 @@ func (s *RouterTestSuite) TestShouldReturnRoomPages() {
 		},
 		{
 			query: "?page=0&size=3&sort=desc&search=speed",
-			page: pagination.Page[dto.RoomResponseDto]{
+			page: dto.RoomPage{
 				Page:  0,
 				Size:  3,
 				Total: 2,
-				Items: []dto.RoomResponseDto{
+				Rooms: []*dto.RoomResponse{
 					{
 						Id:       room4.Id().Value(),
 						Name:     room4.Name().Value(),
@@ -211,18 +343,18 @@ func (s *RouterTestSuite) TestShouldReturnRoomPages() {
 		res.Body.Close()
 		assert.Nil(t, err)
 
-		var page pagination.Page[dto.RoomResponseDto]
+		var page dto.RoomPage
 		err = json.Unmarshal(body, &page)
 		assert.Nil(t, err)
 
 		assert.Equal(t, tc.page.Page, page.Page)
 		assert.Equal(t, tc.page.Size, page.Size)
 		assert.Equal(t, tc.page.Total, page.Total)
-		assert.Equal(t, len(tc.page.Items), len(page.Items))
+		assert.Equal(t, len(tc.page.Rooms), len(page.Rooms))
 
-		for i := 0; i < len(tc.page.Items); i++ {
-			expectedItem := tc.page.Items[i]
-			actualItem := page.Items[i]
+		for i := 0; i < len(tc.page.Rooms); i++ {
+			expectedItem := tc.page.Rooms[i]
+			actualItem := page.Rooms[i]
 
 			assert.Equal(t, expectedItem.Id, actualItem.Id)
 			assert.Equal(t, expectedItem.Name, actualItem.Name)
@@ -258,7 +390,7 @@ func (s *RouterTestSuite) TestShouldReturnARoom() {
 	res.Body.Close()
 	assert.Nil(t, err)
 
-	var result dto.RoomResponseDto
+	var result dto.RoomResponse
 	err = json.Unmarshal(body, &result)
 	assert.Nil(t, err)
 
@@ -322,7 +454,9 @@ func (s *RouterTestSuite) TestShouldDeleteARoom() {
 	name, _ := valueobject.NewRoomNameWith("A Game")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	room := entity.NewRoom(adminId, name, category)
+
 	s.roomRepository.Save(s.ctx, room)
+	assert.False(t, room.IsDeleted())
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/rooms/"+room.Id().Value(), nil)
@@ -334,7 +468,58 @@ func (s *RouterTestSuite) TestShouldDeleteARoom() {
 	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	savedRoom, err := s.roomRepository.FindById(s.ctx, room.Id())
-	assert.Nil(t, savedRoom)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, repository.ErrNotFoundRoom)
+	assert.NotNil(t, savedRoom)
+	assert.Nil(t, err)
+	assert.True(t, savedRoom.IsDeleted())
+}
+
+func (s *RouterTestSuite) TestCreateMessage_ShouldCreateAMessage() {
+	defer db.Clear()
+	t := s.T()
+	r := s.router
+
+	userName := auth.GetNickname()
+	userId := auth.GenerateSub()
+	jwt, _ := auth.GenerateJWT(userId)
+
+	room := createARoom(userId, "A Game", "Game")
+	s.roomRepository.Save(s.ctx, room)
+
+	payload := struct {
+		Text string `json:"text"`
+	}{
+		"A text",
+	}
+
+	url := fmt.Sprintf("/api/v1/rooms/%s/send", room.Id().Value())
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	r.ServeHTTP(w, req)
+	res := w.Result()
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+
+	msgs := make(chan *domain_event.MessageEvent)
+	defer close(msgs)
+
+	go func() {
+		err := s.messageEventGateway.Receive(s.ctx, msgs)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	select {
+	case msg := <-msgs:
+		assert.Equal(t, room.Id().Value(), msg.RoomId)
+		assert.Equal(t, userId, msg.SenderId)
+		assert.Equal(t, userName, msg.SenderName)
+		assert.Equal(t, payload.Text, msg.Text)
+	case <-time.After(30 * time.Second):
+		t.Fail()
+	}
 }

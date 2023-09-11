@@ -16,5 +16,4 @@ type RoomRepository interface {
 	FindById(ctx context.Context, id *valueobject.Id) (*entity.Room, error)
 	Search(ctx context.Context, query *pagination.Query) (*pagination.Page[*entity.Room], error)
 	Update(ctx context.Context, room *entity.Room) error
-	Delete(ctx context.Context, id *valueobject.Id) error
 }

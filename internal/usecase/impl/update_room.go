@@ -52,6 +52,10 @@ func (u *UpdateRoomUseCase) Execute(ctx context.Context, input *usecase.UpdateRo
 		return err
 	}
 
+	if room.IsDeleted() {
+		return repository.ErrNotFoundRoom
+	}
+
 	err = room.ValidateAdmin(adminId)
 	if err != nil {
 		return err

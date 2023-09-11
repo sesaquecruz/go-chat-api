@@ -21,7 +21,7 @@ func TestUpdateRoomUseCase_ShouldUpdateARoomWhenDataIsValid(t *testing.T) {
 	category, _ := valueobject.NewRoomCategoryWith("Game")
 	createdAt := valueobject.NewTimestamp()
 	updatedAt, _ := valueobject.NewTimestampWith(createdAt.Value())
-	savedRoom := entity.NewRoomWith(id, adminId, name, category, createdAt, updatedAt)
+	savedRoom := entity.NewRoomWith(id, adminId, name, category, createdAt, updatedAt, nil)
 
 	ctx := context.Background()
 	input := &usecase.UpdateRoomUseCaseInput{

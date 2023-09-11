@@ -10,4 +10,5 @@ type RoomHandler interface {
 	SearchRoom(c *gin.Context)
 	UpdateRoom(c *gin.Context)
 	DeleteRoom(c *gin.Context)
+	SendMessage(c *gin.Context)
 }

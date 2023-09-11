@@ -15,5 +15,6 @@ create table if not exists rooms (
 	name varchar(50) not null, 
 	category room_category_enum not null, 
 	created_at timestamp with time zone not null,
-	updated_at timestamp with time zone not null
+	updated_at timestamp with time zone not null,
+	deleted_at timestamp with time zone null
 );

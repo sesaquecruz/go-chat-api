@@ -26,49 +26,6 @@ func (_m *RoomRepositoryMock) EXPECT() *RoomRepositoryMock_Expecter {
 	return &RoomRepositoryMock_Expecter{mock: &_m.Mock}
 }
 
-// Delete provides a mock function with given fields: ctx, id
-func (_m *RoomRepositoryMock) Delete(ctx context.Context, id *valueobject.Id) error {
-	ret := _m.Called(ctx, id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *valueobject.Id) error); ok {
-		r0 = rf(ctx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// RoomRepositoryMock_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type RoomRepositoryMock_Delete_Call struct {
-	*mock.Call
-}
-
-// Delete is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id *valueobject.Id
-func (_e *RoomRepositoryMock_Expecter) Delete(ctx interface{}, id interface{}) *RoomRepositoryMock_Delete_Call {
-	return &RoomRepositoryMock_Delete_Call{Call: _e.mock.On("Delete", ctx, id)}
-}
-
-func (_c *RoomRepositoryMock_Delete_Call) Run(run func(ctx context.Context, id *valueobject.Id)) *RoomRepositoryMock_Delete_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*valueobject.Id))
-	})
-	return _c
-}
-
-func (_c *RoomRepositoryMock_Delete_Call) Return(_a0 error) *RoomRepositoryMock_Delete_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *RoomRepositoryMock_Delete_Call) RunAndReturn(run func(context.Context, *valueobject.Id) error) *RoomRepositoryMock_Delete_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // FindById provides a mock function with given fields: ctx, id
 func (_m *RoomRepositoryMock) FindById(ctx context.Context, id *valueobject.Id) (*entity.Room, error) {
 	ret := _m.Called(ctx, id)

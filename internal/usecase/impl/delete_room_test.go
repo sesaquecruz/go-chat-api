@@ -40,10 +40,10 @@ func TestDeleteRoomUseCase_ShouldDeleteARoomWhenDataIsValid(t *testing.T) {
 
 	roomRepository.
 		EXPECT().
-		Delete(mock.Anything, mock.Anything).
-		Run(func(c context.Context, i *valueobject.Id) {
+		Update(mock.Anything, mock.Anything).
+		Run(func(c context.Context, r *entity.Room) {
 			assert.Equal(t, ctx, c)
-			assert.Equal(t, input.Id, i.Value())
+			assert.Equal(t, input.Id, r.Id().Value())
 		}).
 		Return(nil).
 		Once()

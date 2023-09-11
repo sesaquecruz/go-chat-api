@@ -9,12 +9,11 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/message"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
+	room_handler "github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
-	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
+	impl_usecase "github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
 	"github.com/sesaquecruz/go-chat-api/pkg/health"
 
 	"github.com/gin-gonic/gin"
@@ -40,33 +39,33 @@ var setMessageEventGateway = wire.NewSet(
 
 // Use Cases
 var setCreateRoomUseCase = wire.NewSet(
-	impl.NewCreateRoomUseCase,
-	wire.Bind(new(usecase.CreateRoomUseCase), new(*impl.CreateRoomUseCase)),
+	impl_usecase.NewCreateRoomUseCase,
+	wire.Bind(new(usecase.CreateRoomUseCase), new(*impl_usecase.CreateRoomUseCase)),
 )
 
 var setSearchRoomUseCase = wire.NewSet(
-	impl.NewSearchRoomUseCase,
-	wire.Bind(new(usecase.SearchRoomUseCase), new(*impl.SearchRoomUseCase)),
+	impl_usecase.NewSearchRoomUseCase,
+	wire.Bind(new(usecase.SearchRoomUseCase), new(*impl_usecase.SearchRoomUseCase)),
 )
 
 var setFindRoomUseCase = wire.NewSet(
-	impl.NewFindRoomUseCase,
-	wire.Bind(new(usecase.FindRoomUseCase), new(*impl.FindRoomUseCase)),
+	impl_usecase.NewFindRoomUseCase,
+	wire.Bind(new(usecase.FindRoomUseCase), new(*impl_usecase.FindRoomUseCase)),
 )
 
 var setUpdateRoomUseCase = wire.NewSet(
-	impl.NewUpdateRoomUseCase,
-	wire.Bind(new(usecase.UpdateRoomUseCase), new(*impl.UpdateRoomUseCase)),
+	impl_usecase.NewUpdateRoomUseCase,
+	wire.Bind(new(usecase.UpdateRoomUseCase), new(*impl_usecase.UpdateRoomUseCase)),
 )
 
 var setDeleteRoomUseCase = wire.NewSet(
-	impl.NewDeleteRoomUseCase,
-	wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)),
+	impl_usecase.NewDeleteRoomUseCase,
+	wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl_usecase.DeleteRoomUseCase)),
 )
 
-var setCreateMessageUseCase = wire.NewSet(
-	impl.NewCreateMessageUseCase,
-	wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)),
+var setSendMessageUseCase = wire.NewSet(
+	impl_usecase.NewSendMessageUseCase,
+	wire.Bind(new(usecase.SendMessageUseCase), new(*impl_usecase.SendMessageUseCase)),
 )
 
 // Health
@@ -77,13 +76,8 @@ var setHealth = wire.NewSet(
 
 // Handlers
 var setRoomHandler = wire.NewSet(
-	room.NewRoomHandler,
-	wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)),
-)
-
-var setMessageHandler = wire.NewSet(
-	message.NewMessageHandler,
-	wire.Bind(new(handler.MessageHandler), new(*message.MessageHandler)),
+	room_handler.NewRoomHandler,
+	wire.Bind(new(handler.RoomHandler), new(*room_handler.RoomHandler)),
 )
 
 // Factories
@@ -110,17 +104,16 @@ func NewRouter(
 		setFindRoomUseCase,
 		setUpdateRoomUseCase,
 		setDeleteRoomUseCase,
-		setCreateMessageUseCase,
+		setSendMessageUseCase,
 
 		// Health
 		setHealth,
 
 		// Handlers
 		setRoomHandler,
-		setMessageHandler,
 
 		// Router
-		web.Router,
+		router.ApiRouter,
 	)
 
 	return &gin.Engine{}
