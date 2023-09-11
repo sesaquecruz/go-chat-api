@@ -7,11 +7,30 @@ import (
 
 type RoomModel struct {
 	Id        string
-	Admin_id  string
+	AdminId   string
 	Name      string
 	Category  string
 	CreatedAt string
 	UpdatedAt string
+	DeletedAt *string
+}
+
+func NewRoomModel(room *entity.Room) *RoomModel {
+	model := RoomModel{}
+
+	model.Id = room.Id().Value()
+	model.AdminId = room.AdminId().Value()
+	model.Name = room.Name().Value()
+	model.Category = room.Category().Value()
+	model.CreatedAt = room.CreatedAt().Value()
+	model.UpdatedAt = room.UpdatedAt().Value()
+
+	if room.DeletedAt() != nil {
+		deleteAt := room.DeletedAt().Value()
+		model.DeletedAt = &deleteAt
+	}
+
+	return &model
 }
 
 func (m *RoomModel) ToEntity() (*entity.Room, error) {
@@ -20,7 +39,7 @@ func (m *RoomModel) ToEntity() (*entity.Room, error) {
 		return nil, err
 	}
 
-	adminId, err := valueobject.NewUserIdWith(m.Admin_id)
+	adminId, err := valueobject.NewUserIdWith(m.AdminId)
 	if err != nil {
 		return nil, err
 	}
@@ -35,17 +54,26 @@ func (m *RoomModel) ToEntity() (*entity.Room, error) {
 		return nil, err
 	}
 
-	created_at, err := valueobject.NewTimestampWith(m.CreatedAt)
+	createdAt, err := valueobject.NewTimestampWith(m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	updated_at, err := valueobject.NewTimestampWith(m.UpdatedAt)
+	updatedAt, err := valueobject.NewTimestampWith(m.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	room := entity.NewRoomWith(id, adminId, name, category, created_at, updated_at)
+	var deletedAt *valueobject.Timestamp = nil
+
+	if m.DeletedAt != nil {
+		deletedAt, err = valueobject.NewTimestampWith(*m.DeletedAt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	room := entity.NewRoomWith(id, adminId, name, category, createdAt, updatedAt, deletedAt)
 
 	return room, nil
 }

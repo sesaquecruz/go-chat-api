@@ -72,6 +72,7 @@ func (s *RoomPostgresRepositoryTestSuite) TestShouldSaveAndFindARoom() {
 	assert.Equal(t, room.Category().Value(), result.Category().Value())
 	assert.Equal(t, room.CreatedAt().Value(), result.CreatedAt().Value())
 	assert.Equal(t, room.UpdatedAt().Value(), result.CreatedAt().Value())
+	assert.Equal(t, room.DeletedAt(), result.DeletedAt())
 }
 
 func (s *RoomPostgresRepositoryTestSuite) TestShouldReturnAnErrorWhenRoomDoesNotExist() {
@@ -236,47 +237,28 @@ func (s *RoomPostgresRepositoryTestSuite) TestShouldUpdateARoom() {
 	err := s.repository.Save(s.ctx, room)
 	assert.Nil(t, err)
 
-	newName, _ := valueobject.NewRoomNameWith("Rust")
-	newCategory, _ := valueobject.NewRoomCategoryWith("Tech")
+	id := room.Id()
+	newAdminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533c")
+	newName, _ := valueobject.NewRoomNameWith("English")
+	newCategory, _ := valueobject.NewRoomCategoryWith("Language")
+	newCreatedAt := valueobject.NewTimestamp()
+	newUpdatedAt := valueobject.NewTimestamp()
+	newDeletedAt := valueobject.NewTimestamp()
 
-	room.UpdateName(newName)
-	room.UpdateCategory(newCategory)
+	newRoom := entity.NewRoomWith(id, newAdminId, newName, newCategory, newCreatedAt, newUpdatedAt, newDeletedAt)
 
-	err = s.repository.Update(s.ctx, room)
+	err = s.repository.Update(s.ctx, newRoom)
 	assert.Nil(t, err)
 
-	result, err := s.repository.FindById(s.ctx, room.Id())
+	result, err := s.repository.FindById(s.ctx, id)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
-	assert.Equal(t, room.Id().Value(), result.Id().Value())
-	assert.Equal(t, room.AdminId().Value(), result.AdminId().Value())
-	assert.Equal(t, room.Name().Value(), result.Name().Value())
-	assert.Equal(t, room.Category().Value(), result.Category().Value())
-	assert.Equal(t, room.CreatedAt().Value(), result.CreatedAt().Value())
-	assert.Equal(t, room.UpdatedAt().Value(), result.UpdatedAt().Value())
-}
-
-func (s *RoomPostgresRepositoryTestSuite) TestShouldDeleteARoom() {
-	defer postgresRoomRepository.Clear()
-	t := s.T()
-
-	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
-	name, _ := valueobject.NewRoomNameWith("Resident Evil")
-	category, _ := valueobject.NewRoomCategoryWith("Game")
-	room := entity.NewRoom(adminId, name, category)
-
-	err := s.repository.Save(s.ctx, room)
-	assert.Nil(t, err)
-
-	result, err := s.repository.FindById(s.ctx, room.Id())
-	assert.NotNil(t, result)
-	assert.Nil(t, err)
-
-	err = s.repository.Delete(s.ctx, room.Id())
-	assert.Nil(t, err)
-
-	result, err = s.repository.FindById(s.ctx, room.Id())
-	assert.Nil(t, result)
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, repository.ErrNotFoundRoom)
+	assert.Equal(t, newRoom.Id().Value(), result.Id().Value())
+	assert.Equal(t, newRoom.AdminId().Value(), result.AdminId().Value())
+	assert.Equal(t, newRoom.Name().Value(), result.Name().Value())
+	assert.Equal(t, newRoom.Category().Value(), result.Category().Value())
+	assert.Equal(t, newRoom.CreatedAt().Value(), result.CreatedAt().Value())
+	assert.Equal(t, newRoom.UpdatedAt().Value(), result.UpdatedAt().Value())
+	assert.Equal(t, newRoom.UpdatedAt().Value(), result.UpdatedAt().Value())
+	assert.Equal(t, newRoom.DeletedAt().Value(), result.DeletedAt().Value())
 }

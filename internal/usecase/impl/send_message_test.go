@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestCreateMessageUseCase_ShouldCreateAMessageWhenDataIsValid(t *testing.T) {
+func TestSendMessageUseCase_ShouldCreateAMessageWhenDataIsValid(t *testing.T) {
 	adminId, _ := valueobject.NewUserIdWith("auth0|64c8457bb160e37c8c34533b")
 	name, _ := valueobject.NewRoomNameWith("A Game")
 	category, _ := valueobject.NewRoomCategoryWith("Game")
@@ -24,7 +24,7 @@ func TestCreateMessageUseCase_ShouldCreateAMessageWhenDataIsValid(t *testing.T) 
 	messageCreated := &entity.Message{}
 
 	ctx := context.Background()
-	input := &usecase.CreateMessageUseCaseInput{
+	input := &usecase.SendMessageUseCaseInput{
 		RoomId:     roomSaved.Id().Value(),
 		SenderId:   roomSaved.AdminId().Value(),
 		SenderName: "An username",
@@ -73,7 +73,7 @@ func TestCreateMessageUseCase_ShouldCreateAMessageWhenDataIsValid(t *testing.T) 
 		Return(nil).
 		Once()
 
-	useCase := NewCreateMessageUseCase(roomRepository, messageRepository, messageEventGateway)
+	useCase := NewSendMessageUseCase(roomRepository, messageRepository, messageEventGateway)
 
 	output, err := useCase.Execute(ctx, input)
 	assert.NotNil(t, output)
@@ -81,17 +81,17 @@ func TestCreateMessageUseCase_ShouldCreateAMessageWhenDataIsValid(t *testing.T) 
 	assert.Equal(t, messageCreated.Id().Value(), output.MessageId)
 }
 
-func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T) {
+func TestSendMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := []struct {
 		test  string
-		input *usecase.CreateMessageUseCaseInput
+		input *usecase.SendMessageUseCaseInput
 		err   error
 	}{
 		{
 			"empty room id",
-			&usecase.CreateMessageUseCaseInput{
+			&usecase.SendMessageUseCaseInput{
 				RoomId:     "",
 				SenderId:   "auth0|64c8457bb160e37c8c34533b",
 				SenderName: "An username",
@@ -101,7 +101,7 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T)
 		},
 		{
 			"empty sender id",
-			&usecase.CreateMessageUseCaseInput{
+			&usecase.SendMessageUseCaseInput{
 				RoomId:     "b3588483-4795-434a-877c-dcd158d6caa7",
 				SenderId:   "",
 				SenderName: "An username",
@@ -111,7 +111,7 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T)
 		},
 		{
 			"empty sender name",
-			&usecase.CreateMessageUseCaseInput{
+			&usecase.SendMessageUseCaseInput{
 				RoomId:     "b3588483-4795-434a-877c-dcd158d6caa7",
 				SenderId:   "auth0|64c8457bb160e37c8c34533b",
 				SenderName: "",
@@ -121,7 +121,7 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T)
 		},
 		{
 			"empty text",
-			&usecase.CreateMessageUseCaseInput{
+			&usecase.SendMessageUseCaseInput{
 				RoomId:     "b3588483-4795-434a-877c-dcd158d6caa7",
 				SenderId:   "auth0|64c8457bb160e37c8c34533b",
 				SenderName: "An username",
@@ -135,7 +135,7 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T)
 	messageRepository := mocks.NewMessageRepositoryMock(t)
 	messageEventGateway := mocks.NewMessageEventGatewayMock(t)
 
-	useCase := NewCreateMessageUseCase(roomRepository, messageRepository, messageEventGateway)
+	useCase := NewSendMessageUseCase(roomRepository, messageRepository, messageEventGateway)
 
 	for _, tc := range testCases {
 		t.Run(tc.test, func(t *testing.T) {
@@ -147,9 +147,9 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorWhenDataIsInvalid(t *testing.T)
 	}
 }
 
-func TestCreateMessageUseCase_ShouldReturnAnErrorOnRepositoryError(t *testing.T) {
+func TestSendMessageUseCase_ShouldReturnAnErrorOnRepositoryError(t *testing.T) {
 	ctx := context.Background()
-	input := &usecase.CreateMessageUseCaseInput{
+	input := &usecase.SendMessageUseCaseInput{
 		RoomId:     "b3588483-4795-434a-877c-dcd158d6caa7",
 		SenderId:   "auth0|64c8457bb160e37c8c34533b",
 		SenderName: "An username",
@@ -165,7 +165,7 @@ func TestCreateMessageUseCase_ShouldReturnAnErrorOnRepositoryError(t *testing.T)
 		Return(nil, repository.ErrNotFoundMessage).
 		Once()
 
-	useCase := NewCreateMessageUseCase(roomRepository, messageRepository, messageEventGateway)
+	useCase := NewSendMessageUseCase(roomRepository, messageRepository, messageEventGateway)
 
 	output, err := useCase.Execute(ctx, input)
 	assert.Nil(t, output)

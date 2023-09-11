@@ -32,7 +32,7 @@ func (u *SearchRoomUseCase) Execute(
 		return nil, err
 	}
 
-	rooms, err := u.roomRepository.Search(ctx, query)
+	page, err := u.roomRepository.Search(ctx, query)
 	if err != nil {
 		u.logger.Error(err)
 		return nil, err
@@ -49,7 +49,7 @@ func (u *SearchRoomUseCase) Execute(
 		}
 	}
 
-	output := pagination.MapPage[*entity.Room, *usecase.SearchRoomUseCaseOutput](rooms, mapper)
+	output := pagination.MapPage[*entity.Room, *usecase.SearchRoomUseCaseOutput](page, mapper)
 
 	return output, nil
 }

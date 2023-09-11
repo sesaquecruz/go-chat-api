@@ -42,12 +42,21 @@ func (u *DeleteRoomUseCase) Execute(ctx context.Context, input *usecase.DeleteRo
 		return err
 	}
 
+	if room.IsDeleted() {
+		return repository.ErrNotFoundRoom
+	}
+
 	err = room.ValidateAdmin(adminId)
 	if err != nil {
 		return err
 	}
 
-	err = u.roomRepository.Delete(ctx, room.Id())
+	err = room.Delete()
+	if err != nil {
+		return err
+	}
+
+	err = u.roomRepository.Update(ctx, room)
 	if err != nil {
 		u.logger.Error(err)
 		return err

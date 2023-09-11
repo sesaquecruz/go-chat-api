@@ -41,6 +41,10 @@ func (u *FindRoomUseCase) Execute(
 		return nil, err
 	}
 
+	if room.IsDeleted() {
+		return nil, repository.ErrNotFoundRoom
+	}
+
 	output := &usecase.FindRoomUseCaseOutput{
 		Id:        room.Id().Value(),
 		AdminId:   room.AdminId().Value(),

@@ -14,6 +14,19 @@ type MessageModel struct {
 	CreatedAt  string
 }
 
+func NewMessageModel(message *entity.Message) *MessageModel {
+	model := MessageModel{}
+
+	model.Id = message.Id().Value()
+	model.RoomId = message.RoomId().Value()
+	model.SenderId = message.SenderId().Value()
+	model.SenderName = message.SenderName().Value()
+	model.Text = message.Text().Value()
+	model.CreatedAt = message.CreatedAt().Value()
+
+	return &model
+}
+
 func (m *MessageModel) ToEntity() (*entity.Message, error) {
 	id, err := valueobject.NewIdWith(m.Id)
 	if err != nil {

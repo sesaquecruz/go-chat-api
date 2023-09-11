@@ -14,10 +14,9 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/domain/repository"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/database"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/event"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler"
-	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/message"
 	"github.com/sesaquecruz/go-chat-api/internal/infra/web/handler/impl/room"
+	"github.com/sesaquecruz/go-chat-api/internal/infra/web/router"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase"
 	"github.com/sesaquecruz/go-chat-api/internal/usecase/impl"
 	"github.com/sesaquecruz/go-chat-api/pkg/health"
@@ -36,12 +35,11 @@ func NewRouter(db *config.DatabaseConfig, broker *config.BrokerConfig, api *conf
 	findRoomUseCase := impl.NewFindRoomUseCase(roomPostgresRepository)
 	updateRoomUseCase := impl.NewUpdateRoomUseCase(roomPostgresRepository)
 	deleteRoomUseCase := impl.NewDeleteRoomUseCase(roomPostgresRepository)
-	roomHandler := room.NewRoomHandler(createRoomUseCase, searchRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase)
 	messagePostgresRepository := database.NewMessagePostgresRepository(sqlDB)
 	messageEventRabbitMqGateway := event.NewMessageEventRabbitMqGateway(connection)
-	createMessageUseCase := impl.NewCreateMessageUseCase(roomPostgresRepository, messagePostgresRepository, messageEventRabbitMqGateway)
-	messageHandler := message.NewMessageHandler(createMessageUseCase, findRoomUseCase)
-	engine := web.Router(api, healthCheck, roomHandler, messageHandler)
+	sendMessageUseCase := impl.NewSendMessageUseCase(roomPostgresRepository, messagePostgresRepository, messageEventRabbitMqGateway)
+	roomHandler := room.NewRoomHandler(createRoomUseCase, searchRoomUseCase, findRoomUseCase, updateRoomUseCase, deleteRoomUseCase, sendMessageUseCase)
+	engine := router.ApiRouter(api, healthCheck, roomHandler)
 	return engine
 }
 
@@ -66,12 +64,10 @@ var setUpdateRoomUseCase = wire.NewSet(impl.NewUpdateRoomUseCase, wire.Bind(new(
 
 var setDeleteRoomUseCase = wire.NewSet(impl.NewDeleteRoomUseCase, wire.Bind(new(usecase.DeleteRoomUseCase), new(*impl.DeleteRoomUseCase)))
 
-var setCreateMessageUseCase = wire.NewSet(impl.NewCreateMessageUseCase, wire.Bind(new(usecase.CreateMessageUseCase), new(*impl.CreateMessageUseCase)))
+var setSendMessageUseCase = wire.NewSet(impl.NewSendMessageUseCase, wire.Bind(new(usecase.SendMessageUseCase), new(*impl.SendMessageUseCase)))
 
 // Health
 var setHealth = wire.NewSet(health.NewHealthCheck, wire.Bind(new(health.Health), new(*health.HealthCheck)))
 
 // Handlers
 var setRoomHandler = wire.NewSet(room.NewRoomHandler, wire.Bind(new(handler.RoomHandler), new(*room.RoomHandler)))
-
-var setMessageHandler = wire.NewSet(message.NewMessageHandler, wire.Bind(new(handler.MessageHandler), new(*message.MessageHandler)))

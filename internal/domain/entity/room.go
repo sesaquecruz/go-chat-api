@@ -5,6 +5,7 @@ import (
 	"github.com/sesaquecruz/go-chat-api/internal/domain/valueobject"
 )
 
+const ErrRoomAlreadyDeleted = validation.ValidationError("room already deleted")
 const ErrInvalidRoomAdmin = validation.UnauthorizedError("room admin is invalid")
 
 type Room struct {
@@ -14,6 +15,7 @@ type Room struct {
 	category  *valueobject.RoomCategory
 	createdAt *valueobject.Timestamp
 	updatedAt *valueobject.Timestamp
+	deletedAt *valueobject.Timestamp
 }
 
 func NewRoom(
@@ -29,6 +31,7 @@ func NewRoom(
 		category,
 		now,
 		now,
+		nil,
 	)
 }
 
@@ -39,6 +42,7 @@ func NewRoomWith(
 	category *valueobject.RoomCategory,
 	createdAt *valueobject.Timestamp,
 	updatedAt *valueobject.Timestamp,
+	deletedAt *valueobject.Timestamp,
 ) *Room {
 	return &Room{
 		id:        id,
@@ -47,6 +51,7 @@ func NewRoomWith(
 		category:  category,
 		createdAt: createdAt,
 		updatedAt: updatedAt,
+		deletedAt: deletedAt,
 	}
 }
 
@@ -74,6 +79,14 @@ func (r *Room) UpdatedAt() *valueobject.Timestamp {
 	return r.updatedAt
 }
 
+func (r *Room) DeletedAt() *valueobject.Timestamp {
+	return r.deletedAt
+}
+
+func (r *Room) IsDeleted() bool {
+	return r.deletedAt != nil
+}
+
 func (r *Room) UpdateName(name *valueobject.RoomName) {
 	r.name = name
 	r.updatedAt = valueobject.NewTimestamp()
@@ -89,5 +102,14 @@ func (r *Room) ValidateAdmin(adminId *valueobject.UserId) error {
 		return ErrInvalidRoomAdmin
 	}
 
+	return nil
+}
+
+func (r *Room) Delete() error {
+	if r.IsDeleted() {
+		return ErrRoomAlreadyDeleted
+	}
+
+	r.deletedAt = valueobject.NewTimestamp()
 	return nil
 }

@@ -13,30 +13,30 @@ import (
 	"github.com/sesaquecruz/go-chat-api/pkg/log"
 )
 
-type CreateMessageUseCase struct {
+type SendMessageUseCase struct {
 	roomRepository      repository.RoomRepository
 	messageRepository   repository.MessageRepository
 	messageEventGateway gateway.MessageEventGateway
 	logger              *log.Logger
 }
 
-func NewCreateMessageUseCase(
+func NewSendMessageUseCase(
 	roomRepository repository.RoomRepository,
 	messageRepository repository.MessageRepository,
 	messageEventGateway gateway.MessageEventGateway,
-) *CreateMessageUseCase {
-	return &CreateMessageUseCase{
+) *SendMessageUseCase {
+	return &SendMessageUseCase{
 		roomRepository:      roomRepository,
 		messageRepository:   messageRepository,
 		messageEventGateway: messageEventGateway,
-		logger:              log.NewLogger("CreateMessageUseCase"),
+		logger:              log.NewLogger("SendMessageUseCase"),
 	}
 }
 
-func (u *CreateMessageUseCase) Execute(
+func (u *SendMessageUseCase) Execute(
 	ctx context.Context,
-	input *usecase.CreateMessageUseCaseInput,
-) (*usecase.CreateMessageUseCaseOutput, error) {
+	input *usecase.SendMessageUseCaseInput,
+) (*usecase.SendMessageUseCaseOutput, error) {
 
 	roomId, err := valueobject.NewIdWith(input.RoomId)
 	if err != nil {
@@ -58,13 +58,17 @@ func (u *CreateMessageUseCase) Execute(
 		return nil, err
 	}
 
-	_, err = u.roomRepository.FindById(ctx, roomId)
+	room, err := u.roomRepository.FindById(ctx, roomId)
 	if err != nil {
 		if !errors.Is(err, repository.ErrNotFoundRoom) {
 			u.logger.Error(err)
 		}
 
 		return nil, err
+	}
+
+	if room.IsDeleted() {
+		return nil, repository.ErrNotFoundRoom
 	}
 
 	message := entity.NewMessage(roomId, senderId, senderName, text)
@@ -82,7 +86,7 @@ func (u *CreateMessageUseCase) Execute(
 		return nil, err
 	}
 
-	output := &usecase.CreateMessageUseCaseOutput{
+	output := &usecase.SendMessageUseCaseOutput{
 		MessageId: message.Id().Value(),
 	}
 
