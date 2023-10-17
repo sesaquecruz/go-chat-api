@@ -16,13 +16,7 @@ This is a web chat API that allows users to create and manage chat rooms and sen
 | `/api/v1/swagger/index.html` | GET    | NO        | API's documentation |
 | `/api/v1/healthz`            | GET    | NO        | Health check        |
 
-## Documentation
-
-The API is running in a Kubernetes cluster using GKE on GCP. Check out the documentation on:
-
-- [Chat API](https://git.chat.api.sesaque.com/api/v1/swagger/index.html)
-
-Other related repositories are:
+## Related repositories
 
 - [Chat App](https://github.com/sesaquecruz/react-chat-app)
 - [Broadcaster API](https://github.com/sesaquecruz/go-chat-broadcaster)
