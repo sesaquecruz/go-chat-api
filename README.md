@@ -18,7 +18,6 @@ This is a web chat API that allows users to create and manage chat rooms and sen
 
 ## Related repositories
 
-- [Chat App](https://github.com/sesaquecruz/react-chat-app)
 - [Broadcaster API](https://github.com/sesaquecruz/go-chat-broadcaster)
 - [Chat Infra](https://github.com/sesaquecruz/k8s-chat-infra)
 - [Chat API Docker Hub](https://hub.docker.com/r/sesaquecruz/go-chat-api/tags)
